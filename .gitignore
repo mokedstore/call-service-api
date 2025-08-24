@@ -1,0 +1,8 @@
+Servers
+.metadata
+**.project
+**.key
+**.classpath
+**.settings
+**/target
+**/configurations.json
