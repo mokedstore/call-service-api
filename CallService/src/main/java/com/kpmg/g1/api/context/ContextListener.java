@@ -5,6 +5,7 @@ import java.util.Enumeration;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.kpmg.g1.api.business.AlertsFetcherThread;
 import com.kpmg.g1.api.cache.ConversationsUUIDCacheThread;
 import com.kpmg.g1.api.utils.Constants;
 import com.kpmg.g1.api.utils.FileWatcherThread;
@@ -18,6 +19,7 @@ public class ContextListener implements ServletContextListener {
 	final static Logger log = LogManager.getLogger(ContextListener.class.getName());
 	private static FileWatcherThread fileWatcer;
 	private static ConversationsUUIDCacheThread conversationsUUIDCacheThread;
+	private static AlertsFetcherThread alertsFetcherThread;
 	
 	@Override
     public void contextInitialized(ServletContextEvent event) {
@@ -31,6 +33,10 @@ public class ContextListener implements ServletContextListener {
 		conversationsUUIDCacheThread = new ConversationsUUIDCacheThread();
 		conversationsUUIDCacheThread.setName("conversationsUUIDCache-Thread");
 		conversationsUUIDCacheThread.start();
+		
+		alertsFetcherThread = new AlertsFetcherThread();
+		alertsFetcherThread.setName("alertsFetcherThread-Thread");
+		alertsFetcherThread.start();
 	}
 	
 	@Override
@@ -50,7 +56,11 @@ public class ContextListener implements ServletContextListener {
     	}
     	
     	if (conversationsUUIDCacheThread != null) {
-    		conversationsUUIDCacheThread.interrupt();
+    		ConversationsUUIDCacheThread.changeClearCacheLoop(false);
+    	}
+    	
+    	if (alertsFetcherThread != null) {
+    		AlertsFetcherThread.changeGetAlertLoop(false);
     	}
     	try { Thread.sleep(Constants.KILL_THREADS_WAIT_TIME_IN_MILLIS); } catch (Exception e) {}
     }

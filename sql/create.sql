@@ -13,30 +13,39 @@
 --     rawEvent        NVARCHAR(MAX)       NULL      -- האירוע הגולמי בפורמט JSON
 -- );
 
--- CREATE TABLE Generic.dbo.Alerts (
---     kId                        NVARCHAR(40)     NOT NULL PRIMARY KEY, -- מזהה חד ערכי (UUID) במערכת
---     createdAt                   DATETIME2        NOT NULL, -- מועד יצירת הרשומה (UTC)
---     updatedAt                   DATETIME2        NULL,     -- מועד עדכון אחרון של הרשומה (UTC)
---     siteNumber                  NVARCHAR(40)    NOT NULL, -- מזהה חד ערכי של האתר
---     systemNumber                NVARCHAR(40)    NOT NULL, -- מזהה חד ערכי של המערכת
---     alarmIncidentNumber         NVARCHAR(40)    NOT NULL, -- מזהה התראה כפי שהגיע מ-API של G1
---     dispatchLocation            NVARCHAR(10)    NULL,     -- מזהה מיקום מוקד
---     alaramEventId               NVARCHAR(40)    NOT NULL, -- מזהה סוג ההתראה
---     currentWriteEventCode       NVARCHAR(10)     NULL,     -- הערך האחרון שנשלח לממשק Write event
---     fullClearStatus             NVARCHAR(5)      NULL,     -- N או Y
---     isActiveAlert               BIT              NOT NULL, -- האם ההתראה פעילה
---     alertHandlingStatusCode     NVARCHAR(5)     NULL,     -- סטטוס הטיפול בהתראה
---     alertHandlingStatusMessage  NVARCHAR(255)    NULL,     -- מלל קצר לסטטוס
---     progressMessages            NVARCHAR(MAX)    NULL,     -- JSON עם היסטוריית ההתראה
---     contacts                    NVARCHAR(MAX)    NULL,     -- JSON עם מספרי אנשי קשר
---     callGeneratedText           NVARCHAR(MAX)    NULL,     -- מלל השיחה בפורמט SSML
---     textToSpeechFileLocation    NVARCHAR(500)    NULL,     -- נתיב לקובץ WAV
---     vonageCurrentConversationId NVARCHAR(45)    NULL,     -- מזהה שיחה מול Vonage
---     answeredPhoneNumber         NVARCHAR(25)     NULL,     -- מספר הטלפון שענה
---     orderOfAnsweredCall         INT              NULL,     -- המיקום במערך אנשי קשר
---     vonageConversationLength    INT              NULL,     -- משך השיחה בשניות
---     customerResponseToCall      NVARCHAR(50)    NULL      -- הערך שהלקוח הזין
--- );
+CREATE TABLE Generic.dbo.TextToSpeechMessages (
+    eventId NVARCHAR(30) PRIMARY KEY,
+    messageId NVARCHAR(30)
+);
+
+
+INSERT INTO  Generic.dbo.TextToSpeechMessages VALUES('130', 'פתיח.1');
+
+CREATE TABLE Generic.dbo.Alerts (
+    kId                        NVARCHAR(40)     NOT NULL PRIMARY KEY, -- מזהה חד ערכי (UUID) במערכת
+    createdAt                   DATETIME2        NOT NULL, -- מועד יצירת הרשומה (UTC)
+    updatedAt                   DATETIME2        NULL,     -- מועד עדכון אחרון של הרשומה (UTC)
+    siteNumber                  NVARCHAR(40)    NOT NULL, -- מזהה חד ערכי של האתר
+    systemNumber                NVARCHAR(40)    NOT NULL, -- מזהה חד ערכי של המערכת
+    alarmIncidentNumber         NVARCHAR(40)    NOT NULL, -- מזהה התראה כפי שהגיע מ-API של G1
+    dispatchLocation            NVARCHAR(10)    NULL,     -- מזהה מיקום מוקד
+    alarmEventId               NVARCHAR(40)    NOT NULL, -- מזהה סוג ההתראה
+    currentWriteEventCode       NVARCHAR(10)     NULL,     -- הערך האחרון שנשלח לממשק Write event
+    fullClearStatus             NVARCHAR(5)      NULL,     -- N או Y
+    isActiveAlert               BIT              NOT NULL, -- האם ההתראה פעילה
+    alertHandlingStatusCode     NVARCHAR(5)     NULL,     -- סטטוס הטיפול בהתראה
+    alertHandlingStatusMessage  NVARCHAR(255)    NULL,     -- מלל קצר לסטטוס
+    progressMessages            NVARCHAR(MAX)    NULL,     -- JSON עם היסטוריית ההתראה
+    contacts                    NVARCHAR(MAX)    NULL,     -- JSON עם מספרי אנשי קשר
+    callGeneratedText           NVARCHAR(MAX)    NULL,     -- מלל השיחה בפורמט SSML
+    textToSpeechFileLocation    NVARCHAR(500)    NULL,     -- נתיב לקובץ WAV
+    vonageCurrentConversationId NVARCHAR(45)    NULL,     -- מזהה שיחה מול Vonage
+    answeredPhoneNumber         NVARCHAR(25)     NULL,     -- מספר הטלפון שענה
+    orderOfAnsweredCall         INT              NULL,     -- המיקום במערך אנשי קשר
+    vonageConversationLength    INT              NULL,     -- משך השיחה בשניות
+    customerResponseToCall      NVARCHAR(50)    NULL,      -- הערך שהלקוח הזין
+    alertDate                   DATETIME2        NOT NULL
+);
 
 -- INSERT INTO Generic.dbo.Alerts (
 --     kId,

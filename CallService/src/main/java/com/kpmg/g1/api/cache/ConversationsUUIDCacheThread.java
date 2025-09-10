@@ -4,6 +4,8 @@ import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.kpmg.g1.api.utils.JSONConfigurations;
+
 public class ConversationsUUIDCacheThread extends Thread {
 	
 	final static Logger log = LogManager.getLogger(ConversationsUUIDCacheThread.class.getName());
@@ -16,7 +18,7 @@ public class ConversationsUUIDCacheThread extends Thread {
 				log.info("ConversationsUUIDCacheThread was interrupted - If this is not due to service restart this not a expected behavior");
 			}
 			try {
-				Thread.sleep(10000);
+				Thread.sleep(JSONConfigurations.getInstance().getConfigurations().getLong("clearConversationCacheIntervalMilliseconds"));
 				ConversationsUUIDCache.getInstance().clearCache();
 			} catch(Exception e) {
 				log.error("Error occurred inside ConversationsUUIDCacheThread " + ExceptionUtils.getStackTrace(e));

@@ -1,0 +1,152 @@
+package com.kpmg.g1.api.business;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.json.JSONObject;
+
+import com.kpmg.g1.api.dao.CallServiceDAOImplementation;
+import com.kpmg.g1.api.objects.model.Alert;
+import com.kpmg.g1.api.utils.Constants;
+import com.kpmg.g1.api.utils.Utils;
+
+public class OpenAlertHandler extends Thread {
+	
+	final static Logger log = LogManager.getLogger(OpenAlertHandler.class.getName());
+	private Alert alert;
+	
+	public OpenAlertHandler() {
+		this.alert = new Alert();
+	}
+	
+	public OpenAlertHandler(Alert alert) {
+		this.alert = alert;
+	}
+
+	public Alert getAlert() {
+		return alert;
+	}
+
+	public void setAlert(Alert alert) {
+		this.alert = alert;
+	}
+	
+	@Override
+	public void run() {
+		if (this.alert.getAlertInitStatus().equals(Constants.NEW_ALERT_INIT_STATUS_NEW)) {
+			handleNewAlert();
+		} else if (this.alert.getAlertInitStatus().equals(Constants.NEW_ALERT_INIT_STATUS_DUPLICATE)) {
+			handleDuplicateAlert();
+		}
+	}
+	
+	private void handleNewAlert() {
+		this.alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_INFO,
+				"successfuly retrieved open alert. start handling it");
+		this.alert.setAlertHandlingStatusCode(Constants.VALID_ALERT_STATUS_CODE);
+		this.alert.setCurrentWriteEventCode(Constants.WRITE_EVENT_CODE_NEW_ACK);
+		this.alert.setFullClearStatus(Constants.FULL_CLEAR_FLAG_NO);
+		// update event with G1 API to acknowledge it
+		JSONObject updateEventOfDuplicateAlertResponse = Utils.updateEvent(this.alert.getSystemNumber(), this.alert.getAlarmIncidentNumber(), this.alert.getCurrentWriteEventCode(),
+				this.alert.getFullClearStatus(), "");
+		if (updateEventOfDuplicateAlertResponse == null) {
+			this.alert.setAlertHandlingStatusCode(Constants.GENERAL_G1_RUNTIME_ERROR);
+			this.alert.setAlertHandlingStatusMessage("Failed to update event due to error in write-event API");
+			this.alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_ERROR,
+					"Failed to update write-event API");
+			this.alert.setActiveAlert(false);
+			CallServiceDAOImplementation.upsertAlert(this.alert);
+			return;
+		} else {
+			this.alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_INFO,
+					"successfuly updated write event api with code: " + this.alert.getCurrentWriteEventCode() + " and flag " + this.alert.getFullClearStatus());
+		}
+		// Get message id in order to create text to speech file
+		String messageId = CallServiceDAOImplementation.getMessageIdByEventIdForTextToSpeech(alert.getAlarmEventId());
+		if (messageId == null) {
+			this.alert.setAlertHandlingStatusCode(Constants.NO_MATCHING_MESSAGE_ID_STATUS_CODE);
+			this.alert.setAlertHandlingStatusMessage("Failed to find matching messageId for eventId: " + alert.getAlarmEventId());
+			this.alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_ERROR,
+					"Failed to to find matching messageId for eventId: " + alert.getAlarmEventId());
+			this.alert.setActiveAlert(false);
+			CallServiceDAOImplementation.upsertAlert(this.alert);
+			return;
+		} else {
+			this.alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_INFO,
+					"Successfully updated alert with write event API with code +44 (acknowledged)");
+		}
+		// get list of contacts that should be called
+		JSONObject callListResponse = Utils.getCallList(this.alert.getSiteNumber(), this.alert.getSystemNumber(), this.alert.getAlertZoneId());
+		if ((callListResponse == null) || (!callListResponse.has("results")) || (callListResponse.getJSONArray("results").length() == 0)) {
+			this.alert.setAlertHandlingStatusCode(Constants.GENERAL_G1_RUNTIME_ERROR);
+			this.alert.setAlertHandlingStatusMessage("Failed to get contacts list");
+			this.alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_ERROR,
+					"Failed to get contacts list for site number: " + alert.getSiteNumber() + " system number: " + alert.getSystemNumber() +
+					" zone id: " + alert.getAlertZoneId());
+			this.alert.setActiveAlert(false);
+			CallServiceDAOImplementation.upsertAlert(this.alert);
+			return;
+		} else {
+			this.alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_INFO,
+					"Successfully received call list contacts");
+			this.alert.setContacts(callListResponse.getJSONArray("results").toString());
+		}
+		// get text for text to speech logic and create WAV file
+		JSONObject getSsmlDataObject = Utils.sendMessage(this.alert.getSiteNumber(), this.alert.getSystemNumber(),
+				this.alert.getAlarmIncidentNumber(), messageId, false, "");
+		String ssmlText = null;
+		if ((getSsmlDataObject == null) || (!getSsmlDataObject.has("ssml_content")) || (getSsmlDataObject.getString("ssml_content").isEmpty())) {
+			this.alert.setAlertHandlingStatusCode(Constants.GENERAL_G1_RUNTIME_ERROR);
+			this.alert.setAlertHandlingStatusMessage("Failed to get contacts ssml content from send message api");
+			this.alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_ERROR,
+					"Failed to get ssml content using send message API for site number: " + alert.getSiteNumber() + " system number: " + alert.getSystemNumber() +
+					" alarm incident number: " + this.alert.getAlarmIncidentNumber()); 
+			this.alert.setActiveAlert(false);
+			CallServiceDAOImplementation.upsertAlert(this.alert);
+			return;
+		} else {
+			this.alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_INFO,
+					"Successfully retrieved SSML contnet for Text to Speech creation");
+			ssmlText = getSsmlDataObject.getString("ssml_content");
+
+		}
+		JSONObject textToSpeechResponse = Utils.convertTextToSpeech(ssmlText);
+		if (textToSpeechResponse == null) {
+			this.alert.setAlertHandlingStatusCode(Constants.FAILED_TO_CREATE_AUDIO_FILE_STATUS_CODE);
+			this.alert.setAlertHandlingStatusMessage("Failed to create audio file from text");
+			this.alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_ERROR,
+					"Failed to create audio file from SSML content: " + ssmlText); 
+			this.alert.setActiveAlert(false);
+			CallServiceDAOImplementation.upsertAlert(this.alert);
+			return;
+		} else {
+			this.alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_INFO,
+					"Successfully created audio file for SSML text");
+			this.alert.setTextToSpeechFileLocation(textToSpeechResponse.getString("path"));
+		}
+		CallServiceDAOImplementation.upsertAlert(this.alert);
+	}
+	
+	private void handleDuplicateAlert() {
+		this.alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_INFO,
+				"successfuly retrieved alert and found that it is a duplicate of alert with id: " + this.alert.getInCaseOfDuplicateCurrentAlertId());
+		this.alert.setCurrentWriteEventCode(Constants.WRITE_EVENT_CODE_DUPLICATE);
+		this.alert.setFullClearStatus(Constants.FULL_CLEAR_FLAG_NO);
+		this.alert.setAlertHandlingStatusCode(Constants.DUPLICATE_ALERT_STATUS_CODE);
+		this.alert.setAlertHandlingStatusMessage("Alert is a duplicate. site has already have an open alert");
+		// try to update alert with relevant code and update its value in DB
+		JSONObject updateEventOfDuplicateAlertResponse = Utils.updateEvent(this.alert.getSystemNumber(), this.alert.getAlarmIncidentNumber(), this.alert.getCurrentWriteEventCode(),
+				this.alert.getFullClearStatus(), "");
+		if (updateEventOfDuplicateAlertResponse == null) {
+			this.alert.setAlertHandlingStatusCode(Constants.GENERAL_G1_RUNTIME_ERROR);
+			this.alert.setAlertHandlingStatusMessage("Failed to update event due to error in write-event API");
+			this.alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_ERROR,
+					"Failed to update write-event API");
+		} else {
+			this.alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_INFO,
+					"successfuly updated write event api with code: " + this.alert.getCurrentWriteEventCode() + " and flag " + this.alert.getFullClearStatus());
+		}
+		CallServiceDAOImplementation.upsertAlert(this.alert);
+		
+	}
+
+}

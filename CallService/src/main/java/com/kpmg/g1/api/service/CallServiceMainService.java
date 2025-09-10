@@ -6,6 +6,7 @@ import org.apache.logging.log4j.Logger;
 import org.json.JSONObject;
 
 import com.kpmg.g1.api.utils.AzureTextToSpeechClient;
+import com.kpmg.g1.api.utils.JSONConfigurations;
 
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
@@ -47,10 +48,11 @@ public class CallServiceMainService {
 		}
         String ssml = requestBodyJson.getString("ssml");
         try {
-            JSONObject textToSpeechResponse = AzureTextToSpeechClient.convertTextToSpeech(ssml);
-            if(textToSpeechResponse.has("error")) {
-   			 	return Response.status(500).entity(textToSpeechResponse.toString()).build();
-            }
+        	  JSONObject textToSpeechResponse = new JSONObject(JSONConfigurations.getInstance().getConfigurations().getJSONObject("mock").getJSONObject("textToSpeech").toString());
+//            JSONObject textToSpeechResponse = AzureTextToSpeechClient.convertTextToSpeech(ssml);
+//            if(textToSpeechResponse.has("error")) {
+//   			 	return Response.status(500).entity(textToSpeechResponse.toString()).build();
+//            }
             return Response.status(200).entity(textToSpeechResponse.toString()).build();
 
         } catch (Exception e) {
