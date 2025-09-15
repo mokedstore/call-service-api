@@ -1,5 +1,6 @@
 package com.kpmg.g1.api.dao;
 
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -18,6 +19,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.kpmg.g1.api.objects.model.Alert;
+import com.kpmg.g1.api.objects.model.Conversation;
 import com.kpmg.g1.api.utils.Constants;
 import com.kpmg.g1.api.utils.JSONConfigurations;
 import com.kpmg.g1.api.utils.Utils;
@@ -246,6 +248,50 @@ public class CallServiceDAOImplementation {
 		} catch (Exception e) {
 			log.error("Error occurred while trying to upsert Alert event of alarm incident number: " + alert.getAlarmIncidentNumber()
 				+ " Alert: " + alert.toString() + " Error: " + ExceptionUtils.getStackTrace(e));
+			return null;
+		} finally {
+			closeResources(connection, ps, null);
+		}
+	}
+	
+	public static String insertConversation(Conversation conversation) {
+		Connection connection = null;
+		PreparedStatement ps = null;
+		try {
+			connection = basicDS.getConnection();
+			ps = connection.prepareStatement(Constants.SQL_QUERY_INSERT_CONVERSATION_RECORD);
+			ps.setString(1, conversation.getConversationId());
+			ps.setString(2, conversation.getUuid());
+			ps.setString(3, conversation.getFromNo());
+			ps.setString(4, conversation.getToNo());
+			Timestamp eventTimestamp = new Timestamp(Utils.getDateFromString(conversation.getEventTimestamp(), Constants.TIMESTAMP_PATTERN).getTime());
+			ps.setTimestamp(5, eventTimestamp);
+			ps.setString(6, conversation.getDisconnectedBy());
+			ps.setInt(7, conversation.getDuration());
+			BigDecimal rate = new BigDecimal(String.valueOf(conversation.getRate()));
+			ps.setBigDecimal(8, rate);
+			BigDecimal price = new BigDecimal(String.valueOf(conversation.getPrice()));
+			ps.setBigDecimal(9, price);
+			if (conversation.getStartTime() == null) {
+				ps.setNull(10, java.sql.Types.TIMESTAMP);
+			} else {
+				Timestamp startTimeTimestamp = new Timestamp(Utils.getDateFromString(conversation.getStartTime(), Constants.TIMESTAMP_PATTERN).getTime());
+				ps.setTimestamp(10, startTimeTimestamp);
+			}
+			if (conversation.getEndTime() == null) {
+				ps.setNull(11, java.sql.Types.TIMESTAMP);
+			} else {
+				Timestamp endTimeTimestamp = new Timestamp(Utils.getDateFromString(conversation.getEndTime(), Constants.TIMESTAMP_PATTERN).getTime());
+				ps.setTimestamp(11, endTimeTimestamp);
+			}
+			ps.setString(12, conversation.getRawEvent());
+			ps.setString(13, conversation.getkId());
+			ps.setString(14, conversation.getStatus());
+			
+			ps.executeUpdate();
+			return "success";
+		} catch (Exception e) {
+			log.error("Error occurred while trying to upsert Converstaion event: " + conversation.toString() + " Error: " + ExceptionUtils.getStackTrace(e));
 			return null;
 		} finally {
 			closeResources(connection, ps, null);

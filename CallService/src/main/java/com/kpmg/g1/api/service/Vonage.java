@@ -5,18 +5,25 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Paths;
+import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.Map;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
+import com.kpmg.g1.api.dao.CallServiceDAOImplementation;
+import com.kpmg.g1.api.objects.model.Conversation;
 import com.kpmg.g1.api.utils.JSONConfigurations;
+import com.kpmg.g1.api.utils.Utils;
 import com.vonage.jwt.Jwt;
 
+import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
@@ -55,9 +62,9 @@ public class Vonage {
     }
 	
 	@GET
-	@Path("/audio/{filename}")
+	@Path("/start/call/audio/{filename}")
 	@Produces("audio/wav")
-	public Response getAudio(@PathParam("filename") String filename) {
+	public Response startCallGetAudio(@PathParam("filename") String filename) {
 		// Basic sanitization to avoid path traversal
 		if (filename.contains("..") || !filename.endsWith(".wav")) {
 			return Response.status(Response.Status.BAD_REQUEST).build();
@@ -79,14 +86,64 @@ public class Vonage {
 		}
 	}
 	
-	public static String generateToken() {
+	@Path("/answer")
+	@POST
+	@Produces(MediaType.APPLICATION_JSON)
+	@Consumes(MediaType.APPLICATION_JSON)
+	public Response answer(String requestBody) {
+		System.out.println("I was Answered");
+		JSONObject requestBodyObj = new JSONObject(requestBody);
+		System.out.println(requestBodyObj.toString(2));
+		Conversation conversationObject = Utils.buildConversationObjectFromVonageEvent(requestBodyObj);
+		if (conversationObject == null) {
+			// TODO: Get alert object using uuid and update its status 
+		} else {
+		  CallServiceDAOImplementation.insertConversation(conversationObject);
+		  // continue business use case based on event status (only relevant events are timeout/hangup or answered)
+		  if (requestBodyObj.optString("status", "").equals("timeout") || requestBodyObj.optString("status", "").equals("unanswered")) {
+			  
+		  } else if (requestBodyObj.optString("status", "").equals("answered")) {
+			  
+		  }
+		}
+		JSONArray ncco = new JSONArray().put(new JSONObject());
+		return Response.status(200).entity(ncco.toString()).build();
+	}
+
+	@Path("/event")
+	@POST
+	@Produces(MediaType.APPLICATION_JSON)
+	@Consumes(MediaType.APPLICATION_JSON)
+	public Response eventApi(String requestBody) {
+		JSONObject response = null;
+		try {
+			System.out.println("in event");
+			JSONObject requestBodyObj = new JSONObject(requestBody);
+			System.out.println(requestBodyObj.toString(2));
+
+//			String nccoStr = "[\n" + "	{\n" + "	  \"action\": \"talk\",\n" + "	  \"text\": \"You pressed 2\"\n"
+//					+ "	},\n" + "	{\n" + "	  \"action\": \"input\",\n" + "	  \"dtmf\": {\n"
+//					+ "		\"maxDigits\": 2,\n" + "		\"timeout\": 5\n" + "	 }\n" + "}]";
+//			JSONArray ncco = new JSONArray(nccoStr);
+			JSONArray ncco = new JSONArray().put(new JSONObject());
+			return Response.status(200).entity(ncco.toString()).build();
+		} catch (Exception e) {
+			log.error("Error occured In event with body " + requestBody + " Error: " + e.getMessage());
+			response = new JSONObject().put("status", "internal service error.");
+			return Response.status(500).entity(response.toString()).build();
+		}
+	}
+	
+	private static String generateToken() {
 		try {
 			JSONObject vonageObject = JSONConfigurations.getInstance().getConfigurations().getJSONObject("vonage");
+			ZonedDateTime nowUtc = ZonedDateTime.now(ZoneId.of("UTC"));
+			ZonedDateTime thirtyMinsFromNow = nowUtc.plusMinutes(vonageObject.getLong("jwtValidInMinutes"));
         	String token = Jwt.builder()
             	    .applicationId(vonageObject.getString("applicationId"))
             	    .privateKeyPath(Paths.get(vonageObject.getString("privateKeyFilePath")))
-            	    .issuedAt(ZonedDateTime.now())
-            	    .expiresAt(ZonedDateTime.now().plusMinutes(vonageObject.getInt("jwtValidInMinutes")))
+            	    .issuedAt(nowUtc)
+            	    .expiresAt(thirtyMinsFromNow)
             	    .addClaim("acl", Map.of(
             	        "paths", Map.of(
             	            "/*/calls/**", Map.of()

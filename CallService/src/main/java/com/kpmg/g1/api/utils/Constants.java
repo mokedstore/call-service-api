@@ -27,8 +27,11 @@ public class Constants {
 	public final static String VALID_ALERT_STATUS_CODE = "0";
 	public final static String DUPLICATE_ALERT_STATUS_CODE = "2";
 	public final static String FAILED_TO_CREATE_AUDIO_FILE_STATUS_CODE = "3";
+	public final static String FAILED_TO_START_VONAGE_CALL_STATUS_CODE = "4";
 	public final static String NO_MATCHING_MESSAGE_ID_STATUS_CODE = "6";
 	public final static String GENERAL_G1_RUNTIME_ERROR = "15";
+	
+	public final static String VONAGE_WAITING_FOR_CUSTOMER_RESPONSE = "waitingCustomerResponse";
 	
 	public final static String ALERT_COLUMN_KID = "kId";
 	public final static String ALERT_COLUMN_CREATED_AT = "createdAt";
@@ -73,4 +76,52 @@ public class Constants {
 			+ " currentWriteEventCode=?, fullClearStatus=?, isActiveAlert=?, alertHandlingStatusCode=?, alertHandlingStatusMessage=?, progressMessages=?, contacts=?,"
 			+ " callGeneratedText=?, textToSpeechFileLocation=?, vonageCurrentConversationId=?, answeredPhoneNumber=?, orderOfAnsweredCall=?, vonageConversationLength=?,"
 			+ " customerResponseToCall=?, alertDate=?, alertZoneId=? WHERE alarmIncidentNumber=?";
+	
+	public static String SQL_QUERY_INSERT_CONVERSATION_RECORD = "INSERT INTO Conversations (conversationId, uuid, fromNo, toNo, eventTimestamp, disconnectedBy, "
+			+ "duration, rate, price, startTime, endTime, rawEvent, kId, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+	
+	public static int VONAGE_GENERATE_TOKEN_MAX_ATTEMPTS = 3;
+	
+	public static String ISRAEL_COUNTRY_CODE = "972";
+	
+	
+	public static String VONAGE_START_CALL_REQUEST_BODY =  "{\n"
+			+ "	\"event_url\": [\n"
+			+ "        \"$vonageAnswerUrl$\"\n"
+			+ "    ],\n"
+			+ "    \"answer_method\": \"POST\",\n"
+			+ "    \"ncco\": [\n"
+			+ "        {\n"
+			+ "            \"streamUrl\": [\n"
+			+ "                \"$vonageStreamUrl$\"\n"
+			+ "            ],\n"
+			+ "            \"activeAction\": true,\n"
+			+ "            \"level\": 0,\n"
+			+ "            \"loop\": 1,\n"
+			+ "            \"action\": \"stream\",\n"
+			+ "            \"bargeIn\": true\n"
+			+ "        },\n"
+			+ "        {\n"
+			+ "            \"action\": \"input\",\n"
+			+ "            \"dtmf\": {\n"
+			+ "                \"maxDigits\": 1,\n"
+			+ "                \"submitOnHash\": \"true\",\n"
+			+ "                \"timeout\": 5\n"
+			+ "            },\n"
+			+ "            \"eventUrl\": [\n"
+			+ "                \"$vonageEventUrl$\"\n"
+			+ "            ],\n"
+			+ "            \"eventMethod\": \"POST\"\n"
+			+ "        }\n"
+			+ "    ],\n"
+			+ "    \"to\": [\n"
+			+ "        {\n"
+			+ "            \"type\": \"phone\",\n"
+			+ "            \"number\": \"$vonageToPhoneNumber$\"\n"
+			+ "        }\n"
+			+ "    ],\n"
+			+ "    \"random_from_number\": true,\n"
+			+ "    \"machine_detection\": \"hangup\",\n"
+			+ "    \"ringing_timer\": $vonageMaxRingTime$\n"
+			+ "}";
 }

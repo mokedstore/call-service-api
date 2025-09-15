@@ -13,7 +13,10 @@ public class Conversation {
 	private double rate;
 	private double price;
 	private String rawEvent;
+	private String startTime;
+	private String endTime; 
 	private String kId;
+	private String status;
 	
 
 	public Conversation() {
@@ -27,11 +30,14 @@ public class Conversation {
 		this.rate = 0.0d;
 		this.price = 0.0d;
 		this.rawEvent = "";
+		this.startTime = "";
+		this.endTime = "";
 		this.kId = "";
+		this.status = "";
 	}
 	
 	public Conversation(String conversationId, String uuid, String fromNo, String toNo, String eventTimestamp,
-			String disconnectedBy, int duration, double rate, double price, String rawEvent, String kId) {
+			String disconnectedBy, int duration, double rate, double price, String rawEvent, String startTime, String endTime, String kId, String status) {
 		this.conversationId = conversationId;
 		this.uuid = uuid;
 		this.fromNo = fromNo;
@@ -42,7 +48,10 @@ public class Conversation {
 		this.rate = rate;
 		this.price = price;
 		this.rawEvent = rawEvent;
+		this.startTime = startTime;
+		this.endTime = endTime;
 		this.kId = kId;
+		this.status = status;
 	}
 
 	public String getConversationId() {
@@ -117,6 +126,22 @@ public class Conversation {
 		this.price = price;
 	}
 
+	public String getStartTime() {
+		return startTime;
+	}
+
+	public void setStartTime(String startTime) {
+		this.startTime = startTime;
+	}
+
+	public String getEndTime() {
+		return endTime;
+	}
+
+	public void setEndTime(String endTime) {
+		this.endTime = endTime;
+	}
+
 	public String getRawEvent() {
 		return rawEvent;
 	}
@@ -131,6 +156,22 @@ public class Conversation {
 
 	public void setkId(String kId) {
 		this.kId = kId;
+	}
+
+	public String getStatus() {
+		return status;
+	}
+
+	public void setStatus(String status) {
+		this.status = status;
+	}
+
+	@Override
+	public String toString() {
+		return "Conversation [conversationId=" + conversationId + ", uuid=" + uuid + ", fromNo=" + fromNo + ", toNo="
+				+ toNo + ", eventTimestamp=" + eventTimestamp + ", disconnectedBy=" + disconnectedBy + ", duration="
+				+ duration + ", rate=" + rate + ", price=" + price + ", rawEvent=" + rawEvent + ", startTime="
+				+ startTime + ", endTime=" + endTime + ", kId=" + kId + ", status=" + status + "]";
 	}
 
 	public JSONObject parseJson() {

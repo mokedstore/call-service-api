@@ -1,5 +1,7 @@
 package com.kpmg.g1.api.utils;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -23,7 +25,10 @@ import org.apache.logging.log4j.Logger;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import com.kpmg.g1.api.cache.ConversationsUUIDCache;
+import com.kpmg.g1.api.dao.CallServiceDAOImplementation;
 import com.kpmg.g1.api.objects.model.Alert;
+import com.kpmg.g1.api.objects.model.Conversation;
 
 public class Utils {
 	
@@ -119,7 +124,40 @@ public class Utils {
 					isActiveAlert, alertHandlingStatusCode, alertHandlingStatusMessage, progressMessages, contacts, callGeneratedText, textToSpeechFileLocation,
 					vonageCurrentConversationId, answeredPhoneNumber, orderOfAnsweredCall, vonageConversationLength, customerResponseToCall, alertDate, alertZoneId);
 		} catch (Exception e) {
-			log.error("Failed to build alert object from open alert data with object: " + alertObject + " Error: " + ExceptionUtils.getStackTrace(e));
+			log.error("Failed to build alert object from open alert data with object: " + alertObject.toString() + " Error: " + ExceptionUtils.getStackTrace(e));
+			return null;
+		}
+	}
+	
+	public static Conversation buildConversationObjectFromVonageEvent(JSONObject vonageEventObject) {
+		try {
+			String conversationId = vonageEventObject.optString("conversation_uuid", "");
+			String uuid = vonageEventObject.getString("uuid");
+			String fromNumber = vonageEventObject.optString("from", "");
+			String toNumber = vonageEventObject.optString("to", "");
+			String eventTimestamp = vonageEventObject.getString("timestamp");
+			String disconnectedBy = (vonageEventObject.has("disconnected_by")) && (!vonageEventObject.isNull("disconnected_by")) ?  vonageEventObject.getString("disconnected_by") : "";
+			int duration = Integer.parseInt(vonageEventObject.optString("duration", "0"));
+			double rate = Double.parseDouble(vonageEventObject.optString("rate", "0.0"));
+			double price = Double.parseDouble(vonageEventObject.optString("price", "0.0"));
+			String rawEvent = vonageEventObject.toString();
+			String startTime = (vonageEventObject.has("start_time")) && (!vonageEventObject.isNull("start_time")) ?  vonageEventObject.getString("start_time") : null;
+			String endTime = (vonageEventObject.has("end_time")) && (!vonageEventObject.isNull("end_time")) ?  vonageEventObject.getString("end_time") : null;
+			String status = vonageEventObject.optString("status", "");
+			String kid = null;
+			if (ConversationsUUIDCache.getInstance().getConversationToKidCache().containsKey(uuid)) {
+				kid = ConversationsUUIDCache.getInstance().getConversationToKidCache().get(uuid);
+			} else {
+				kid = CallServiceDAOImplementation.getKidByVonageUUID(uuid);
+				if (kid== null) {
+					kid = "";
+				} else {
+					ConversationsUUIDCache.getInstance().addToCache(uuid, kid);
+				}
+			}
+			return new Conversation(conversationId, uuid, fromNumber, toNumber, eventTimestamp, disconnectedBy, duration, rate, price, rawEvent, startTime, endTime, kid, status);
+		} catch (Exception e) {
+			log.error("Failed to build conversation object from vonage event data with object: " + vonageEventObject.toString() + " Error: " + ExceptionUtils.getStackTrace(e));
 			return null;
 		}
 	}
@@ -313,6 +351,71 @@ public class Utils {
 				client.close();
 			} catch (Exception e) {}
 		}
+	}
+	
+	public static JSONObject vonageStartCall(String toNumber, String pathToSpeechFile) {
+		int startCallsAttempts = 0;
+		while (startCallsAttempts < Constants.VONAGE_GENERATE_TOKEN_MAX_ATTEMPTS) {
+			startCallsAttempts++;
+			VonageToken vonageToken = VonageToken.getInstance();
+			if (vonageToken == null || vonageToken.getTokenValue() == null) {
+				continue;
+			}
+			String url = null;
+			try {
+				url = JSONConfigurations.getInstance().getConfigurations().getJSONObject("vonage").getString("callsUrl");
+			} catch (Exception e) {
+				log.error("vonageStartCall: Failed to get vonage calls URL: " + ExceptionUtils.getStackTrace(e));
+				return null;
+			}
+			
+			CloseableHttpClient client = HttpClientBuilder.create().build();
+			HttpPost post = new HttpPost(url);
+			CloseableHttpResponse response = null;
+
+			post.setHeader("Accept", "application/json");
+			post.setHeader("Content-Type", "application/json");
+			post.setHeader("Authorization", "Bearer " + vonageToken.getTokenValue());
+			
+			try {
+				// get variables to inject to Vonage body
+				JSONObject vonageObject = JSONConfigurations.getInstance().getConfigurations().getJSONObject("vonage");
+				String vonageAnswerUrl = vonageObject.getString("answerUrlEndpoint");
+				Path pathToSpeechFileObject = Paths.get(pathToSpeechFile);
+		        String fileName = pathToSpeechFileObject.getFileName().toString();
+				String streamMessageUrl = vonageObject.getString("streamUrlEndpoint") + "/" + fileName;
+				String eventUrl = vonageObject.getString("eventUrlEndpoint");
+				String maxRingTime = String.valueOf(vonageObject.getInt("maxRingTimeSeconds"));
+				String phoneNumberToCall = Constants.ISRAEL_COUNTRY_CODE + toNumber.substring(1);
+				
+				
+				String startCallRequestStr = Constants.VONAGE_START_CALL_REQUEST_BODY.replace("$vonageAnswerUrl$", vonageAnswerUrl).replace("$vonageStreamUrl$", streamMessageUrl)
+						.replace("$vonageEventUrl$", eventUrl).replace("$vonageToPhoneNumber$", phoneNumberToCall).replace("$vonageMaxRingTime$", maxRingTime);
+				StringEntity input = new StringEntity(startCallRequestStr, "UTF-8");
+				input.setContentType("application/json");
+				post.setEntity(input);
+				
+				response = client.execute(post);
+				String responseData = EntityUtils.toString(response.getEntity(), "UTF-8");
+				// if response is valid return
+				if (response.getStatusLine().getStatusCode() == 201) {
+					return new JSONObject(responseData);
+				} else if (response.getStatusLine().getStatusCode() == 401) {
+					log.error("Received Unexpected status 401 when trying to start call with values - toNumber: " + toNumber + ", pathToSpeechFile: " +  pathToSpeechFile
+							+ " data: " + responseData + ". trying to renew token");
+					VonageToken.manuallyRenewToken();
+				} else {
+					log.error("Received Unexpected status " + response.getStatusLine().getStatusCode()
+							+ " when trying to start call with values - toNumber: " + toNumber + ", pathToSpeechFile: " +  pathToSpeechFile
+							+ " data: " + responseData);
+				}
+
+			} catch (Exception e) {
+				log.error("Received Exception when trying to start call with values - toNumber: " + toNumber + ", pathToSpeechFile: " +  pathToSpeechFile
+						+ " .Error: " + ExceptionUtils.getStackTrace(e));
+			}
+		}
+		return null;
 	}
 
 }

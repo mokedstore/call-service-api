@@ -2,8 +2,10 @@ package com.kpmg.g1.api.business;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
+import com.kpmg.g1.api.cache.ConversationsUUIDCache;
 import com.kpmg.g1.api.dao.CallServiceDAOImplementation;
 import com.kpmg.g1.api.objects.model.Alert;
 import com.kpmg.g1.api.utils.Constants;
@@ -47,7 +49,7 @@ public class OpenAlertHandler extends Thread {
 		this.alert.setFullClearStatus(Constants.FULL_CLEAR_FLAG_NO);
 		// update event with G1 API to acknowledge it
 		JSONObject updateEventOfDuplicateAlertResponse = Utils.updateEvent(this.alert.getSystemNumber(), this.alert.getAlarmIncidentNumber(), this.alert.getCurrentWriteEventCode(),
-				this.alert.getFullClearStatus(), "");
+				this.alert.getFullClearStatus(), this.alert.getFullClearStatus());
 		if (updateEventOfDuplicateAlertResponse == null) {
 			this.alert.setAlertHandlingStatusCode(Constants.GENERAL_G1_RUNTIME_ERROR);
 			this.alert.setAlertHandlingStatusMessage("Failed to update event due to error in write-event API");
@@ -107,6 +109,7 @@ public class OpenAlertHandler extends Thread {
 			this.alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_INFO,
 					"Successfully retrieved SSML contnet for Text to Speech creation");
 			ssmlText = getSsmlDataObject.getString("ssml_content");
+			this.alert.setCallGeneratedText(ssmlText);
 
 		}
 		JSONObject textToSpeechResponse = Utils.convertTextToSpeech(ssmlText);
@@ -122,6 +125,32 @@ public class OpenAlertHandler extends Thread {
 			this.alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_INFO,
 					"Successfully created audio file for SSML text");
 			this.alert.setTextToSpeechFileLocation(textToSpeechResponse.getString("path"));
+		}
+		// for each contact add number of tries field to keep track
+		JSONArray contacts = new JSONArray(this.alert.getContacts());
+		for (int i = 0; i < contacts.length(); i++) {
+			contacts.getJSONObject(i).put("numberOfTries", 0);
+		}
+		this.alert.setContacts(contacts.toString());
+		String phoneNumber = contacts.getJSONObject(0).getString("phone");
+		//String callToNumber
+		JSONObject startVonageCallResponse = Utils.vonageStartCall(contacts.getJSONObject(0).getString("phone"), this.alert.getTextToSpeechFileLocation());
+		if (startVonageCallResponse == null) {
+			this.alert.setAlertHandlingStatusCode(Constants.FAILED_TO_START_VONAGE_CALL_STATUS_CODE);
+			this.alert.setAlertHandlingStatusMessage("Failed to create vonage call");
+			this.alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_ERROR,
+					"Failed to create call to vonage to number: " + phoneNumber); 
+			this.alert.setActiveAlert(false);
+			CallServiceDAOImplementation.upsertAlert(this.alert);
+			return;
+		} else {
+			this.alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_INFO,
+					"Successfully started call with Vonage to number: " + phoneNumber + " attempt: 1");
+			this.alert.setVonageCurrentConversationId(startVonageCallResponse.getString("uuid"));
+			this.alert.setAlertHandlingStatusMessage(Constants.VONAGE_WAITING_FOR_CUSTOMER_RESPONSE);
+			contacts.getJSONObject(0).put("numberOfTries", 1);
+			this.alert.setContacts(contacts.toString());
+			ConversationsUUIDCache.getInstance().addToCache(this.alert.getVonageCurrentConversationId(), this.alert.getkId());
 		}
 		CallServiceDAOImplementation.upsertAlert(this.alert);
 	}
