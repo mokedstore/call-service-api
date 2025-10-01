@@ -6,6 +6,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -94,7 +95,10 @@ public class CallServiceDAOImplementation {
 		return ds;
 	}
 
-	public static String getKidByVonageUUID(String uuid) throws SQLException {
+	public static String getKidByVonageUUID(String uuid) {
+		if (uuid.isEmpty()) {
+			return null;
+		}
 		Connection connection = null;
 		PreparedStatement ps = null;
 		ResultSet res = null;
@@ -105,14 +109,14 @@ public class CallServiceDAOImplementation {
 			res = ps.executeQuery();
 
 			if (!res.isBeforeFirst()) {
-				return "";
+				return null;
 			}
 			res.next();
 			return res.getString(Constants.SQL_COLUMN_KID);
 
 		} catch (SQLException e) {
 			log.error("Error while trying to get kId from vonage UUID " + uuid + " Error: " + ExceptionUtils.getStackTrace(e));
-			throw e;
+			return null;
 		} finally {
 			closeResources(connection, ps, res);
 		}
@@ -177,6 +181,234 @@ public class CallServiceDAOImplementation {
 		} catch (SQLException e) {
 			log.error("Error occured while trying to get Open alerts for site numbers " + siteNumbers + " Error: " + ExceptionUtils.getStackTrace(e));
 			throw e;
+		} finally {
+			closeResources(connection, ps, res);
+		}
+	}
+	
+	public static Alert getAlertByVonageUuid(String uuid) {
+		Connection connection = null;
+		PreparedStatement ps = null;
+		ResultSet res = null;
+		try {
+			connection = basicDS.getConnection();
+			ps = connection.prepareStatement(Constants.GET_ALERT_DATA_BY_VONAGE_UUID);
+			ps.setString(1, uuid);
+			res = ps.executeQuery();
+
+			if (!res.isBeforeFirst()) {
+				return null;
+			}
+			res.next();
+			Alert alert = buildAlertObjectFromSQLResult(res);
+			return alert;
+
+		} catch (SQLException e) {
+			log.error("Error while trying to get alert object from vonage uuid " + uuid + " Error: " + ExceptionUtils.getStackTrace(e));
+			return null;
+		} finally {
+			closeResources(connection, ps, res);
+		}
+	}
+	
+	public static List<Alert> getAlertsOpenForTooLong() {
+		Connection connection = null;
+		PreparedStatement ps = null;
+		ResultSet res = null;
+		List<Alert> openAlertsForLongTime = new ArrayList<Alert>();
+		try {
+			connection = basicDS.getConnection();
+			// build Prepared statement dynamically
+			ps = connection.prepareStatement(Constants.GET_OPEN_ALERTS_OPEN_FOR_LONG_TIME);
+			Instant nowInstant = Instant.now();
+			Date nowDate = Date.from(nowInstant);
+			Date olderDate = Utils.getOlderDateByMinutes(nowDate, JSONConfigurations.getInstance().getConfigurations().getInt("maxTimeOpenedAlertMinutes"));
+			ps.setTimestamp(1, new Timestamp(olderDate.getTime()));
+			res = ps.executeQuery();
+			// check if there are any results found and if there are not return empty string
+			if(!res.isBeforeFirst()) {
+				return openAlertsForLongTime;
+			}
+			
+			// loop over results
+			while(res.next()) {
+				Alert openAlert = buildAlertObjectFromSQLResult(res);
+				if (openAlert != null) {
+					openAlertsForLongTime.add(openAlert);
+				}
+			}
+			return openAlertsForLongTime;
+		} catch (Exception e) {
+			log.error("Error occured while trying to get Open alerts opened for too long for date. Error: " + ExceptionUtils.getStackTrace(e));
+			return null;
+		} finally {
+			closeResources(connection, ps, res);
+		}
+	}
+	
+	public static String getVonageUuidByConversationId(String conversationId) {
+		Connection connection = null;
+		PreparedStatement ps = null;
+		ResultSet res = null;
+		try {
+			connection = basicDS.getConnection();
+			ps = connection.prepareStatement(Constants.SQL_QUERY_GET_UUID_FROM_CONVERSATION_ID);
+			ps.setString(1, conversationId);
+			res = ps.executeQuery();
+
+			if (!res.isBeforeFirst()) {
+				return null;
+			}
+			res.next();
+			return res.getString(Constants.CONVERSATIONS_COLUMN_UUID);
+
+		} catch (SQLException e) {
+			log.error("Error while trying to get vonage convertsation uuid from conversation id " + conversationId + " Error: " + ExceptionUtils.getStackTrace(e));
+			return null;
+		} finally {
+			closeResources(connection, ps, res);
+		}
+	}
+	
+	public static String getSpeechFileLocationByVonageUUID(String uuid) {
+		if (uuid.isEmpty()) {
+			return null;
+		}
+		Connection connection = null;
+		PreparedStatement ps = null;
+		ResultSet res = null;
+		try {
+			connection = basicDS.getConnection();
+			ps = connection.prepareStatement(Constants.GET_FILE_LOCATION_BY_VONAGE_UUID);
+			ps.setString(1, uuid);
+			res = ps.executeQuery();
+
+			if (!res.isBeforeFirst()) {
+				return null;
+			}
+			res.next();
+			return res.getString(Constants.ALERT_COLUMN_TEXT_SPEECH_FILE_LOCATION);
+
+		} catch (SQLException e) {
+			log.error("Error while trying to get speech file location from vonage UUID " + uuid + " Error: " + ExceptionUtils.getStackTrace(e));
+			return null;
+		} finally {
+			closeResources(connection, ps, res);
+		}
+	}
+	
+	public static String getAnsweredConversationStatus(String uuid, String conversationId) {
+		// both uuid and conversation id can be used for conversation data retrieval. In case one of them is empty set to value that will not match (empty matches everything)
+		if (uuid.isEmpty()) {
+			uuid = "1";
+		}
+		if (conversationId.isEmpty()) {
+			conversationId = "1";
+		}
+		Connection connection = null;
+		PreparedStatement ps = null;
+		ResultSet res = null;
+		try {
+			connection = basicDS.getConnection();
+			ps = connection.prepareStatement(Constants.SQL_QUERY_GET_STATUS_OF_ANSWERED_CALLS_BY_IDS);
+			ps.setString(1, uuid);
+			ps.setString(2, conversationId);
+			res = ps.executeQuery();
+
+			if (!res.isBeforeFirst()) {
+				return "";
+			}
+			res.next();
+			return res.getString(Constants.CONVERSATIONS_COLUMN_STATUS);
+
+		} catch (SQLException e) {
+			log.error("Error while trying to get completed conversation status from vonage UUID " + uuid + " and vonage conversation id " + conversationId
+					+" Error: " + ExceptionUtils.getStackTrace(e));
+			return null;
+		} finally {
+			closeResources(connection, ps, res);
+		}
+	}
+	
+	public static String getDispatchLocationByUuid(String uuid) {
+		if (uuid == null || uuid.isEmpty()) {
+			return null;
+		}
+		Connection connection = null;
+		PreparedStatement ps = null;
+		ResultSet res = null;
+		try {
+			connection = basicDS.getConnection();
+			ps = connection.prepareStatement(Constants.GET_DISPATCH_LOCATION_BY_VONAGE_UUID);
+			ps.setString(1, uuid);
+			res = ps.executeQuery();
+
+			if (!res.isBeforeFirst()) {
+				return null;
+			}
+			res.next();
+			return res.getString(Constants.ALERT_COLUMN_DISPATCH_LOCATION);
+
+		} catch (SQLException e) {
+			log.error("Error while trying to get dispatch location id from uuid " + uuid + " Error: " + ExceptionUtils.getStackTrace(e));
+			return null;
+		} finally {
+			closeResources(connection, ps, res);
+		}
+	}
+	
+	public static String getDispatchLocationNumber(String dispatchLocationId) {
+		Connection connection = null;
+		PreparedStatement ps = null;
+		ResultSet res = null;
+		try {
+			connection = basicDS.getConnection();
+			ps = connection.prepareStatement(Constants.SQL_QUERY_GET_DISPATCH_NUMBER_FROM_ID);
+			ps.setString(1, dispatchLocationId);
+			res = ps.executeQuery();
+
+			if (!res.isBeforeFirst()) {
+				return null;
+			}
+			res.next();
+			return res.getString(Constants.DISPATCH_COLUMN_PHONE_NUMBER);
+
+		} catch (SQLException e) {
+			log.error("Error while trying to get dispatch location number from location id " + dispatchLocationId + " Error: " + ExceptionUtils.getStackTrace(e));
+			return null;
+		} finally {
+			closeResources(connection, ps, res);
+		}
+	}
+	
+	public static int getNumberOfResponsesPerConversation(String uuid, String conversationId) {
+		// both uuid and conversation id can be used for conversation data retrieval. In case one of them is empty set to value that will not match (empty matches everything)
+		if (uuid.isEmpty()) {
+			uuid = "1";
+		}
+		if (conversationId.isEmpty()) {
+			conversationId = "1";
+		}
+		Connection connection = null;
+		PreparedStatement ps = null;
+		ResultSet res = null;
+		try {
+			connection = basicDS.getConnection();
+			ps = connection.prepareStatement(Constants.SQL_QUERY_CHECK_NUMBER_OF_ANSWERS);
+			ps.setString(1, uuid);
+			ps.setString(2, conversationId);
+			res = ps.executeQuery();
+
+			if (!res.isBeforeFirst()) {
+				return 0;
+			}
+			res.next();
+			return res.getInt("count");
+
+		} catch (SQLException e) {
+			log.error("Error while trying to get number of responses per conversation from vonage UUID " + uuid + " and vonage conversation id " + conversationId
+					+" Error: " + ExceptionUtils.getStackTrace(e));
+			return 0;
 		} finally {
 			closeResources(connection, ps, res);
 		}
@@ -257,6 +489,7 @@ public class CallServiceDAOImplementation {
 	public static String insertConversation(Conversation conversation) {
 		Connection connection = null;
 		PreparedStatement ps = null;
+		// in case uuid is empty try to k
 		try {
 			connection = basicDS.getConnection();
 			ps = connection.prepareStatement(Constants.SQL_QUERY_INSERT_CONVERSATION_RECORD);

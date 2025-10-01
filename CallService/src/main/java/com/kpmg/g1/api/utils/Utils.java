@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.TimeZone;
 import java.util.UUID;
@@ -51,6 +52,7 @@ public class Utils {
 	public static String getTimestampFromDateUsingFormat(Date date, String format) {
 		// create pattern in accordance with phoenix pattern
 		SimpleDateFormat sdf = new SimpleDateFormat(format);
+		sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
 		// in case date is null then get current time
 		if (date == null) {
 			Instant now = Instant.now();
@@ -82,6 +84,18 @@ public class Utils {
 		}
 	}
 	
+	public static Date getOlderDateByMinutes(Date date, int minutes) {
+		try {
+			Instant newInstant = date.toInstant().minus(30, ChronoUnit.MINUTES);
+	        Date newDate = Date.from(newInstant);
+	        return newDate;
+		} catch (Exception e) {
+			log.error("getOlderDateByMinutes: failed to reduce " + String.valueOf(minutes) + " from date: " + date.toString() + " . Error: " + ExceptionUtils.getStackTrace(e));
+			return null;
+		}
+	}
+	
+	
 	public static Date getDateFromString(String formattedDate, String format) {
 		try {
 			// create pattern in accordance with phoenix pattern
@@ -90,6 +104,7 @@ public class Utils {
 			sdf.setLenient(false);
 			return sdf.parse(formattedDate);
 		} catch (Exception e) {
+			log.error("getDateFromString: Failed to convert formattedDate: " + formattedDate + " Using format: "+ format + "Error: " + ExceptionUtils.getStackTrace(e));
 			return null;
 		}
 	}
@@ -132,10 +147,21 @@ public class Utils {
 	public static Conversation buildConversationObjectFromVonageEvent(JSONObject vonageEventObject) {
 		try {
 			String conversationId = vonageEventObject.optString("conversation_uuid", "");
-			String uuid = vonageEventObject.getString("uuid");
+			String uuid = vonageEventObject.optString("uuid", vonageEventObject.optString("call_uuid", ""));
+			// in case uuid is empty try to get it via conversation id
+			if ((uuid.isEmpty()) && (!conversationId.isEmpty()))  {
+				uuid = CallServiceDAOImplementation.getVonageUuidByConversationId(conversationId);
+				if (uuid == null) {
+					uuid = "";
+				}
+			}
 			String fromNumber = vonageEventObject.optString("from", "");
 			String toNumber = vonageEventObject.optString("to", "");
 			String eventTimestamp = vonageEventObject.getString("timestamp");
+			// sometimes timestamp arrives with high granularity for sub seconds so normalize to milliseconds
+			if (eventTimestamp.length() > Constants.ISO_DATE_FORMAT_EXPECTED_LENGTH) {
+				eventTimestamp = eventTimestamp.substring(0,Constants.ISO_DATE_FORMAT_EXPECTED_LENGTH -1) + "Z";
+			}
 			String disconnectedBy = (vonageEventObject.has("disconnected_by")) && (!vonageEventObject.isNull("disconnected_by")) ?  vonageEventObject.getString("disconnected_by") : "";
 			int duration = Integer.parseInt(vonageEventObject.optString("duration", "0"));
 			double rate = Double.parseDouble(vonageEventObject.optString("rate", "0.0"));
@@ -386,11 +412,13 @@ public class Utils {
 				String streamMessageUrl = vonageObject.getString("streamUrlEndpoint") + "/" + fileName;
 				String eventUrl = vonageObject.getString("eventUrlEndpoint");
 				String maxRingTime = String.valueOf(vonageObject.getInt("maxRingTimeSeconds"));
+				String clientResponseTimeout =  String.valueOf(vonageObject.getInt("clientResponseTimeoutSeconds"));
 				String phoneNumberToCall = Constants.ISRAEL_COUNTRY_CODE + toNumber.substring(1);
 				
 				
 				String startCallRequestStr = Constants.VONAGE_START_CALL_REQUEST_BODY.replace("$vonageAnswerUrl$", vonageAnswerUrl).replace("$vonageStreamUrl$", streamMessageUrl)
-						.replace("$vonageEventUrl$", eventUrl).replace("$vonageToPhoneNumber$", phoneNumberToCall).replace("$vonageMaxRingTime$", maxRingTime);
+						.replace("$vonageEventUrl$", eventUrl).replace("$vonageToPhoneNumber$", phoneNumberToCall).replace("$vonageMaxRingTime$", maxRingTime)
+						.replace("$clientResponseTimeout$", clientResponseTimeout);
 				StringEntity input = new StringEntity(startCallRequestStr, "UTF-8");
 				input.setContentType("application/json");
 				post.setEntity(input);

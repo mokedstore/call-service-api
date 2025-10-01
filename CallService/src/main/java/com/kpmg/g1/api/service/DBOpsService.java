@@ -43,7 +43,7 @@ public class DBOpsService {
         String uuid = requestBodyJson.getString("uuid");
         try {
             String kId = CallServiceDAOImplementation.getKidByVonageUUID(uuid);
-            if(kId.isEmpty()) {
+            if(kId == null) {
             	responseBodyJson.put("error", "NOT_FOUND").put("message", "Could not find matching kId for vonage uuid: " + uuid);
    			 	return Response.status(404).entity(responseBodyJson.toString()).build();
             }

@@ -70,12 +70,12 @@ public class VonageToken {
 			log.info("Trying to generate new token for Vonage..");
 			JSONObject vonageObject = JSONConfigurations.getInstance().getConfigurations().getJSONObject("vonage");
 			ZonedDateTime nowUtc = ZonedDateTime.now(ZoneId.of("UTC"));
-			ZonedDateTime thirtyMinsFromNow = nowUtc.plusMinutes(vonageObject.getLong("jwtValidInMinutes"));
+			ZonedDateTime xMinsFromNow = nowUtc.plusMinutes(vonageObject.getLong("jwtValidInMinutes"));
         	String token = Jwt.builder()
             	    .applicationId(vonageObject.getString("applicationId"))
             	    .privateKeyPath(Paths.get(vonageObject.getString("privateKeyFilePath")))
             	    .issuedAt(nowUtc)
-            	    .expiresAt(thirtyMinsFromNow)
+            	    .expiresAt(xMinsFromNow)
             	    .addClaim("acl", Map.of(
             	        "paths", Map.of(
             	            "/*/calls/**", Map.of()
@@ -83,7 +83,7 @@ public class VonageToken {
             	    ))
             	    .build()
             	    .generate();
-        	return new VonageToken(token, thirtyMinsFromNow);
+        	return new VonageToken(token, xMinsFromNow);
         } catch(Exception e) {
         	log.error("generateToken: Failed to get token for Vonage: " + ExceptionUtils.getStackTrace(e));
             return null;

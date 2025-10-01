@@ -49,7 +49,7 @@ public class OpenAlertHandler extends Thread {
 		this.alert.setFullClearStatus(Constants.FULL_CLEAR_FLAG_NO);
 		// update event with G1 API to acknowledge it
 		JSONObject updateEventOfDuplicateAlertResponse = Utils.updateEvent(this.alert.getSystemNumber(), this.alert.getAlarmIncidentNumber(), this.alert.getCurrentWriteEventCode(),
-				this.alert.getFullClearStatus(), this.alert.getFullClearStatus());
+				this.alert.getFullClearStatus(), "");
 		if (updateEventOfDuplicateAlertResponse == null) {
 			this.alert.setAlertHandlingStatusCode(Constants.GENERAL_G1_RUNTIME_ERROR);
 			this.alert.setAlertHandlingStatusMessage("Failed to update event due to error in write-event API");
@@ -60,7 +60,7 @@ public class OpenAlertHandler extends Thread {
 			return;
 		} else {
 			this.alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_INFO,
-					"successfuly updated write event api with code: " + this.alert.getCurrentWriteEventCode() + " and flag " + this.alert.getFullClearStatus());
+					"successfuly updated write event api with code: " + this.alert.getCurrentWriteEventCode() + " (acknowledged) and flag " + this.alert.getFullClearStatus());
 		}
 		// Get message id in order to create text to speech file
 		String messageId = CallServiceDAOImplementation.getMessageIdByEventIdForTextToSpeech(alert.getAlarmEventId());
@@ -74,7 +74,7 @@ public class OpenAlertHandler extends Thread {
 			return;
 		} else {
 			this.alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_INFO,
-					"Successfully updated alert with write event API with code +44 (acknowledged)");
+					"Successfully retrieved message id using alarm event id to get alarm content");
 		}
 		// get list of contacts that should be called
 		JSONObject callListResponse = Utils.getCallList(this.alert.getSiteNumber(), this.alert.getSystemNumber(), this.alert.getAlertZoneId());
@@ -134,7 +134,7 @@ public class OpenAlertHandler extends Thread {
 		this.alert.setContacts(contacts.toString());
 		String phoneNumber = contacts.getJSONObject(0).getString("phone");
 		//String callToNumber
-		JSONObject startVonageCallResponse = Utils.vonageStartCall(contacts.getJSONObject(0).getString("phone"), this.alert.getTextToSpeechFileLocation());
+		JSONObject startVonageCallResponse = Utils.vonageStartCall(phoneNumber, this.alert.getTextToSpeechFileLocation());
 		if (startVonageCallResponse == null) {
 			this.alert.setAlertHandlingStatusCode(Constants.FAILED_TO_START_VONAGE_CALL_STATUS_CODE);
 			this.alert.setAlertHandlingStatusMessage("Failed to create vonage call");

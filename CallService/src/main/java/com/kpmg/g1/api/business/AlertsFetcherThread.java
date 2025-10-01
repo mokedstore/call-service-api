@@ -28,7 +28,6 @@ public class AlertsFetcherThread extends Thread {
 	
 	@Override
 	public void run() {
-		
 		if (isAlertLoopMaster) {
 			log.info("Found that this instance is master for open alerts fetching. Start checking for open alerts");
 			while(getAlertsLoop) {
@@ -44,11 +43,10 @@ public class AlertsFetcherThread extends Thread {
 				}
 				log.info("Finished handling current new alerts");
 			}
-			
+			log.info("AlertsFetcherThread was gracefully terminated");
 		} else {
 			log.info("Found that this instance is not master for open alerts fetching");
 		}
-		log.info("AlertsFetcherThread was gracefully terminated");
 	}
 	
 	private static boolean checkAlertLoopMaster() {

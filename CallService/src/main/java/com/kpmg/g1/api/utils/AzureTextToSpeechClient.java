@@ -25,7 +25,7 @@ public class AzureTextToSpeechClient {
 
 	private static String AzureServicesKey = getAzureServicesKey();
 	private static String AzureTextToSpeechUrl = getAzureTextToSpeechUrl();
-	private static String localPathForWAVFiles = getLocalPathForWAVFiles();
+	private static String localPathForDynamicAudioFiles = getLocalPathForDynamicAudioFiles();
 	
 	private static String getAzureServicesKey() {
 		try {
@@ -36,11 +36,11 @@ public class AzureTextToSpeechClient {
 		}
 	}
 	
-	private static String getLocalPathForWAVFiles() {
+	private static String getLocalPathForDynamicAudioFiles() {
 		try {
-			return JSONConfigurations.getInstance().getConfigurations().getString("speechFilesLocation");
+			return JSONConfigurations.getInstance().getConfigurations().getString("dynamicSpeechFilesLocation");
 		} catch (Exception e) {
-			log.error("Failed to get local path for WAV files " + ExceptionUtils.getStackTrace(e));
+			log.error("Failed to get local path for dynamic audio files " + ExceptionUtils.getStackTrace(e));
 			return null;
 		}
 	}
@@ -72,7 +72,59 @@ public class AzureTextToSpeechClient {
 			if (response.getStatusLine().getStatusCode() == 200) {
 				HttpEntity entity = response.getEntity();
 				if (entity != null) {
-					Path wavOutputPath = Paths.get(localPathForWAVFiles, UUID.randomUUID().toString() + ".wav");
+					Path wavOutputPath = Paths.get(localPathForDynamicAudioFiles, UUID.randomUUID().toString() + ".mp3");
+                    try (InputStream inputStream = entity.getContent();
+                        FileOutputStream outputStream = new FileOutputStream(wavOutputPath.toString())) {
+                        byte[] buffer = new byte[8192];
+                        int bytesRead;
+                        while ((bytesRead = inputStream.read(buffer)) != -1) {
+                            outputStream.write(buffer, 0, bytesRead);
+                        }
+                        responseObj.put("path", wavOutputPath);
+                    } catch(Exception err) {
+                    	log.error("convertTextToSpeech: Failed to convert " + textAsSSML + " to MP3 file using Azure Web Services. Error: " + ExceptionUtils.getStackTrace(err));
+                    	responseObj.put("error", "INTERNAL_SERVICE_ERROR").put("message", "Failed to write MP3 file to disk");
+                    }
+                }
+			}
+		} catch(Exception e) {
+			log.error("convertTextToSpeech: Failed to convert " + textAsSSML + " to MP3 file using Azure Web Services. Error: " + ExceptionUtils.getStackTrace(e));
+			responseObj.put("error", "INTERNAL_SERVICE_ERROR").put("message", "Failed to convert text to MP3 file using Azure Text to Speech Service");
+		} finally {
+			try {
+				if (response != null) {
+					response.close();
+				}
+				if (client != null) {
+					client.close();
+				}
+			} catch (Exception e) {
+				log.error("convertTextToSpeech: Failed to close client or response " + ExceptionUtils.getStackTrace(e));
+			}
+			
+		}
+		return responseObj;
+	}
+	
+	public static JSONObject convertTextToSpeechWAV(String textAsSSML) {
+		JSONObject responseObj = new JSONObject();
+		CloseableHttpClient client = null;
+		CloseableHttpResponse response = null;
+		try {
+			client = HttpClientBuilder.create().build();
+			HttpPost post = new HttpPost(AzureTextToSpeechUrl);
+			
+			post.setHeader("X-Microsoft-OutputFormat", JSONConfigurations.getInstance().getConfigurations().getJSONObject("azureTextToSpeech").getString("outuputFormat"));
+			post.setHeader("Content-Type", "application/ssml+xml");
+			post.setHeader("Ocp-Apim-Subscription-Key", AzureServicesKey);
+			
+			post.setEntity(new StringEntity(textAsSSML, StandardCharsets.UTF_8));
+			
+			response = client.execute(post);
+			if (response.getStatusLine().getStatusCode() == 200) {
+				HttpEntity entity = response.getEntity();
+				if (entity != null) {
+					Path wavOutputPath = Paths.get(localPathForDynamicAudioFiles, UUID.randomUUID().toString() + ".wav");
                     try (InputStream inputStream = entity.getContent();
                         FileOutputStream outputStream = new FileOutputStream(wavOutputPath.toString())) {
                         byte[] buffer = new byte[8192];

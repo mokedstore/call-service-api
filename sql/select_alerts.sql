@@ -71,8 +71,11 @@ SELECT TOP (1000) [kId]
 --     N'1'
 -- );
 
--- ALTER TABLE Generic.dbo.Alerts
--- ADD alertDate DATETIME2 DEFAULT SYSDATETIME();
+ALTER TABLE Generic.dbo.Alerts
+ADD alertZoneId NVARCHAR(10);
+
+ALTER TABLE Generic.dbo.Alerts
+DROP COLUMN alert_zone_id;
 
 -- UPDATE  Generic.dbo.Alerts SET alertDate=GETDATE()
 
@@ -81,3 +84,16 @@ DELETE FROM Generic.dbo.Alerts;
 SELECT * FROM Generic.dbo.Alerts;
 
 SELECT * FROM Generic.dbo.TextToSpeechMessages;
+
+SELECT kId FROM Generic.dbo.Alerts WHERE vonageCurrentConversationId = '';
+
+USE Generic
+EXEC sp_rename 'DispathIdToPhoneNumber', 'DispatchIdToPhoneNumber';
+
+SELECT dispatchPhoneNumber FROM Generic.dbo.DispatchIdToPhoneNumber WHERE  dispatchLocation='101';
+
+SELECT DISTINCT dispatchLocation FROM Generic.dbo.Alerts WHERE vonageCurrentConversationId = '501820a3-edad-4432-b857-f87e0aeb3329';
+
+UPDATE Generic.dbo.DispatchIdToPhoneNumber SET dispatchPhoneNumber='972544888673' WHERE dispatchLocation='101'
+
+UPDATE Generic.dbo.Alerts SET isActiveAlert=1 WHERE alarmIncidentNumber='1402229120'

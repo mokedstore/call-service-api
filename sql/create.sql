@@ -19,7 +19,22 @@ CREATE TABLE Generic.dbo.TextToSpeechMessages (
 );
 
 
-INSERT INTO  Generic.dbo.TextToSpeechMessages VALUES('130', 'פתיח.1');
+-- USE master;
+-- ALTER DATABASE Generic SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+
+-- ALTER DATABASE Generic COLLATE Hebrew_CI_AS;
+
+-- ALTER DATABASE Generic SET MULTI_USER;
+
+-- ALTER DATABASE Generic 
+-- COLLATE Hebrew_CI_AS;
+
+DELETE FROM Generic.dbo.TextToSpeechMessages;
+
+SELECT * FROM Generic.dbo.TextToSpeechMessages;
+
+INSERT INTO  Generic.dbo.TextToSpeechMessages VALUES('130', N'1.פתיח');
+INSERT INTO  Generic.dbo.TextToSpeechMessages VALUES(N'noAnswer', N'אין מענה');
 
 CREATE TABLE Generic.dbo.Alerts (
     kId                        NVARCHAR(40)     NOT NULL PRIMARY KEY, -- מזהה חד ערכי (UUID) במערכת
@@ -132,3 +147,35 @@ WHERE kId IS NULL;
 
 ALTER TABLE Generic.dbo.Conversations
 ALTER COLUMN kId NVARCHAR(40) NOT NULL;
+
+CREATE TABLE Generic.dbo.DispathIdToPhoneNumber (
+    dispatchLocation            NVARCHAR(10) NOT NULL PRIMARY KEY,
+    dispatchSiteName            NVARCHAR(60)  NOT NULL,
+    dispatchPhoneNumber         NVARCHAR(20)    NOT NULL
+);
+
+INSERT INTO Generic.dbo.DispathIdToPhoneNumber (dispatchLocation, dispatchSiteName, dispatchPhoneNumber) VALUES
+(N'100', N'ארצי VIP', N'97239374564'),
+(N'101', N'מוקד עסקי', N'97239374584'),
+(N'102', N'ארצי עסקיים', N'97239374564'),
+(N'103', N'מוסדי', N'97239374584'),
+(N'104', N'פרטי', N'97239374564'),
+(N'105', N'מוקד רואה', N'97239374542'),
+(N'1055', N'טעוני רישוי מוקד רואה', N'97239374542'),
+(N'107', N'מוקד רואה ארצי', N'97239374542'),
+(N'109', N'פרטי', N'97239374564'),
+(N'110', N'מוקד עסקי 2', N'97239374584'),
+(N'111', N'מוקד מטר', N'97239374584'),
+(N'113', N'מוקד שחר', N'97289255355'),
+(N'114', N'טעוני רישוי באר שבע', N'97239374584'),
+(N'116', N'מוקד רואה שחר', N'97289255355'),
+(N'118', N'אנליטיקה שחר', N'97289255355'),
+(N'119', N'מוקד כשר', N'97239374542'),
+(N'122', N'אנליטיקה פרו', N'97239374542'),
+(N'151', N'ארצי רובוט', N'97239374564'),
+(N'152', N'משרד החינוך', N'97239374584'),
+(N'153', N'כלבי אשמורת', N'97239374564'),
+(N'155', N'IWATCHER', N'97239374564'),
+(N'200', N'טעוני רישוי שחר', N'97289255355'),
+(N'99', N'ארצי', N'97239374564'),
+(N'666', N'מוקד רואה אנליטיקה', N'97239374542');
