@@ -235,26 +235,60 @@ public class Vonage {
 							.replace("$vonageStreamUrl$", fileToStreamEndpoint);
 					ncco = new JSONArray(nccoStr);
 				} else if (pressedDigits.equals("2")) {
-					// get dispatch location in case not found use the default number
-					String dispatchLocationId = CallServiceDAOImplementation.getDispatchLocationByUuid(conversationObject.getUuid());
-					String dispatchPhoneNumber = "";
-					if (dispatchLocationId == null) {
-						dispatchPhoneNumber = JSONConfigurations.getInstance().getConfigurations().getString("defaultDispatchPhoneNumber");
+					// check if transfer to dispatch should be a valid option
+					JSONObject dispatchLocationAndAlarmEventId = CallServiceDAOImplementation.getAlarmCodeAndDispatchLocationByUuid(conversationObject.getUuid());
+					if (dispatchLocationAndAlarmEventId == null) {
+						// in case failed to get any information allow to send request to default number
+						String dispatchPhoneNumber = JSONConfigurations.getInstance().getConfigurations().getString("defaultDispatchPhoneNumber");
+						String fileToStreamEndpoint = JSONConfigurations.getInstance().getConfigurations().getJSONObject("vonage").getString("streamUrlStaticEndpoint") + 
+								"/" + JSONConfigurations.getInstance().getConfigurations().getJSONObject("vonage").getJSONObject("staticFilesNames").getString("transfer");
+						JSONObject vonageObject = JSONConfigurations.getInstance().getConfigurations().getJSONObject("vonage");
+						String nccoStr = Constants.VONAGE_TRANSFER_CALL_NCCO_EVENT
+								.replace("$vonageStreamUrl$", fileToStreamEndpoint)
+								.replace("$vonageEventUrl$", vonageObject.getString("eventUrlEndpoint"))
+								.replace("$transferCallRingTimeout$", String.valueOf(vonageObject.getInt("transferCallRingTimeout")))
+								.replace("$dispactchNumber$", dispatchPhoneNumber);
+						ncco = new JSONArray(nccoStr);
 					} else {
-						dispatchPhoneNumber = CallServiceDAOImplementation.getDispatchLocationNumber(dispatchLocationId);
-						if (dispatchPhoneNumber == null) {
-							dispatchPhoneNumber = JSONConfigurations.getInstance().getConfigurations().getString("defaultDispatchPhoneNumber");
+						String alarmEventId = dispatchLocationAndAlarmEventId.getString("alarmEventId");
+						boolean transferToDispatch = Utils.allowTransferToDispatchAllAlertsTime(alarmEventId);
+						if (transferToDispatch) {
+							String dispatchPhoneNumber = "";
+							String dispatchLocationId = dispatchLocationAndAlarmEventId.getString("dispatchLocation");
+							if (dispatchLocationId == null) {
+								dispatchPhoneNumber = JSONConfigurations.getInstance().getConfigurations().getString("defaultDispatchPhoneNumber");
+							} else {
+								dispatchPhoneNumber = CallServiceDAOImplementation.getDispatchLocationNumber(dispatchLocationId);
+								if (dispatchPhoneNumber == null) {
+									dispatchPhoneNumber = JSONConfigurations.getInstance().getConfigurations().getString("defaultDispatchPhoneNumber");
+								}
+							}
+							String fileToStreamEndpoint = JSONConfigurations.getInstance().getConfigurations().getJSONObject("vonage").getString("streamUrlStaticEndpoint") + 
+									"/" + JSONConfigurations.getInstance().getConfigurations().getJSONObject("vonage").getJSONObject("staticFilesNames").getString("transfer");
+							JSONObject vonageObject = JSONConfigurations.getInstance().getConfigurations().getJSONObject("vonage");
+							String nccoStr = Constants.VONAGE_TRANSFER_CALL_NCCO_EVENT
+									.replace("$vonageStreamUrl$", fileToStreamEndpoint)
+									.replace("$vonageEventUrl$", vonageObject.getString("eventUrlEndpoint"))
+									.replace("$transferCallRingTimeout$", String.valueOf(vonageObject.getInt("transferCallRingTimeout")))
+									.replace("$dispactchNumber$", dispatchPhoneNumber);
+							ncco = new JSONArray(nccoStr);
+						} else {
+							int numberOfResponsesInThisConversation = CallServiceDAOImplementation.getNumberOfResponsesPerConversation(conversationObject.getUuid(), conversationObject.getConversationId());
+							if (numberOfResponsesInThisConversation <= JSONConfigurations.getInstance().getConfigurations().getInt("maxResponsesPerConversation")) {
+								String fileToStreamEndpoint = JSONConfigurations.getInstance().getConfigurations().getJSONObject("vonage").getString("streamUrlStaticEndpoint") + 
+										"/" + JSONConfigurations.getInstance().getConfigurations().getJSONObject("vonage").getJSONObject("staticFilesNames").getString("invalidOption");
+								String nccoStr = Constants.VONAGE_CALL_FOR_ACTION_NCCO_EVENT
+										.replace("$vonageStreamUrl$", fileToStreamEndpoint)
+										.replace("$vonageEventUrl$", JSONConfigurations.getInstance().getConfigurations().getJSONObject("vonage").getString("eventUrlEndpoint"))
+										.replace("$clientResponseTimeout$", String.valueOf(JSONConfigurations.getInstance().getConfigurations().getJSONObject("vonage").getInt("clientResponseTimeoutSeconds")));
+								ncco = new JSONArray(nccoStr);
+							} else {
+								log.info("Received too many responses: " + String.valueOf(numberOfResponsesInThisConversation) + " for conversation with uuid: " + conversationObject.getUuid() +
+										" and conversation id: " + conversationObject.getConversationId() + " with number: " + conversationObject.getFromNo() + ". Hanging the call");
+								ncco.put(new JSONObject());
+							}
 						}
 					}
-					String fileToStreamEndpoint = JSONConfigurations.getInstance().getConfigurations().getJSONObject("vonage").getString("streamUrlStaticEndpoint") + 
-							"/" + JSONConfigurations.getInstance().getConfigurations().getJSONObject("vonage").getJSONObject("staticFilesNames").getString("transfer");
-					JSONObject vonageObject = JSONConfigurations.getInstance().getConfigurations().getJSONObject("vonage");
-					String nccoStr = Constants.VONAGE_TRANSFER_CALL_NCCO_EVENT
-							.replace("$vonageStreamUrl$", fileToStreamEndpoint)
-							.replace("$vonageEventUrl$", vonageObject.getString("eventUrlEndpoint"))
-							.replace("$transferCallRingTimeout$", String.valueOf(vonageObject.getInt("transferCallRingTimeout")))
-							.replace("$dispactchNumber$", dispatchPhoneNumber);
-					ncco = new JSONArray(nccoStr);
 				} else if (pressedDigits.equals("9")) {
 					int numberOfResponsesInThisConversation = CallServiceDAOImplementation.getNumberOfResponsesPerConversation(conversationObject.getUuid(), conversationObject.getConversationId());
 					if (numberOfResponsesInThisConversation <= JSONConfigurations.getInstance().getConfigurations().getInt("maxResponsesPerConversation")) {

@@ -18,6 +18,7 @@ import org.apache.commons.dbcp2.BasicDataSource;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.json.JSONObject;
 
 import com.kpmg.g1.api.objects.model.Alert;
 import com.kpmg.g1.api.objects.model.Conversation;
@@ -330,7 +331,7 @@ public class CallServiceDAOImplementation {
 		}
 	}
 	
-	public static String getDispatchLocationByUuid(String uuid) {
+	public static JSONObject getAlarmCodeAndDispatchLocationByUuid(String uuid) {
 		if (uuid == null || uuid.isEmpty()) {
 			return null;
 		}
@@ -347,7 +348,9 @@ public class CallServiceDAOImplementation {
 				return null;
 			}
 			res.next();
-			return res.getString(Constants.ALERT_COLUMN_DISPATCH_LOCATION);
+			String dispatchLocation = res.getString(Constants.ALERT_COLUMN_DISPATCH_LOCATION);
+			String alarmEventId = res.getString(Constants.ALERT_COLUMN_ALARM_EVENT_ID);
+			return new JSONObject().put("dispatchLocation", dispatchLocation).put("alarmEventId", alarmEventId);
 
 		} catch (SQLException e) {
 			log.error("Error while trying to get dispatch location id from uuid " + uuid + " Error: " + ExceptionUtils.getStackTrace(e));

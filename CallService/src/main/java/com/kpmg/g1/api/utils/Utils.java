@@ -445,5 +445,38 @@ public class Utils {
 		}
 		return null;
 	}
+	
+	public static boolean allowTransferToDispatchAllAlertsTime(String alertCode) {
+		try {
+			// check if given alert code is part of codes that are allowed to be passed to dispatch at any time
+			JSONArray alertCodesAlwaysAllowPass = JSONConfigurations.getInstance().getConfigurations().getJSONObject("dispatchTransfer").getJSONArray("alertCodesAlwaysAllowPass");
+			for (int i = 0; i < alertCodesAlwaysAllowPass.length(); i++) {
+				String currentAlertCode = alertCodesAlwaysAllowPass.getString(i);
+				if (currentAlertCode.equals(alertCode)) {
+					return true;
+				}
+			}
+			// check day and time of day to determine if call can be passed to dispatch regardless of its type
+			JSONObject daysConf = JSONConfigurations.getInstance().getConfigurations().getJSONObject("dispatchTransfer").getJSONObject("days");
+			LocalDateTime now = LocalDateTime.now();
+			String dayOfWeek = String.valueOf(now.getDayOfWeek().getValue());
+			int hour = now.getHour();
+			JSONArray specificDayConf = daysConf.getJSONArray(dayOfWeek);
+			for (int i = 0; i < specificDayConf.length(); i++) {
+				JSONObject currentDayConf = specificDayConf.getJSONObject(i);
+				int gte = currentDayConf.getInt("gte");
+				int lt = currentDayConf.getInt("lt");
+				if (hour >= gte && hour < lt) {
+					return true;
+				}
+			}
+			
+		} catch (Exception e) {
+			log.error("allowTransferToDispatchAllAlertsTime: Error occurred while trying to check if should allow to pass call to dispatch with alertCode: " + alertCode +
+					" Error: " + ExceptionUtils.getStackTrace(e));
+			return false;
+		}
+		return false;
+	}
 
 }

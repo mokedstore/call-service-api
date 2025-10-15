@@ -56,6 +56,11 @@ public class OpenAlertHandler extends Thread {
 			this.alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_ERROR,
 					"Failed to update write-event API");
 			this.alert.setActiveAlert(false);
+			this.alert.setCurrentWriteEventCode(Constants.FAILED_ALERT_CODE_EVENT);
+			this.alert.setFullClearStatus(Constants.FULL_CLEAR_FLAG_YES);
+			// update that alert handling failed
+			Utils.updateEvent(this.alert.getSystemNumber(), this.alert.getAlarmIncidentNumber(), this.alert.getCurrentWriteEventCode(),
+					this.alert.getFullClearStatus(), Constants.FAILED_ALERT_COMMENT);
 			CallServiceDAOImplementation.upsertAlert(this.alert);
 			return;
 		} else {
@@ -64,6 +69,10 @@ public class OpenAlertHandler extends Thread {
 		}
 		// Get message id in order to create text to speech file
 		String messageId = CallServiceDAOImplementation.getMessageIdByEventIdForTextToSpeech(alert.getAlarmEventId());
+		// in case message id is null check for custom rules
+		if (messageId == null) {
+			messageId = getCustomMessageIdFromAlarmEventId();
+		}
 		if (messageId == null) {
 			this.alert.setAlertHandlingStatusCode(Constants.NO_MATCHING_MESSAGE_ID_STATUS_CODE);
 			this.alert.setAlertHandlingStatusMessage("Failed to find matching messageId for eventId: " + alert.getAlarmEventId());
@@ -71,6 +80,11 @@ public class OpenAlertHandler extends Thread {
 					"Failed to to find matching messageId for eventId: " + alert.getAlarmEventId());
 			this.alert.setActiveAlert(false);
 			CallServiceDAOImplementation.upsertAlert(this.alert);
+			this.alert.setCurrentWriteEventCode(Constants.FAILED_ALERT_CODE_EVENT);
+			this.alert.setFullClearStatus(Constants.FULL_CLEAR_FLAG_YES);
+			// update that alert handling failed
+			Utils.updateEvent(this.alert.getSystemNumber(), this.alert.getAlarmIncidentNumber(), this.alert.getCurrentWriteEventCode(),
+					this.alert.getFullClearStatus(), Constants.FAILED_ALERT_COMMENT);
 			return;
 		} else {
 			this.alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_INFO,
@@ -85,6 +99,11 @@ public class OpenAlertHandler extends Thread {
 					"Failed to get contacts list for site number: " + alert.getSiteNumber() + " system number: " + alert.getSystemNumber() +
 					" zone id: " + alert.getAlertZoneId());
 			this.alert.setActiveAlert(false);
+			this.alert.setCurrentWriteEventCode(Constants.FAILED_ALERT_CODE_EVENT);
+			this.alert.setFullClearStatus(Constants.FULL_CLEAR_FLAG_YES);
+			// update that alert handling failed
+			Utils.updateEvent(this.alert.getSystemNumber(), this.alert.getAlarmIncidentNumber(), this.alert.getCurrentWriteEventCode(),
+					this.alert.getFullClearStatus(), Constants.FAILED_ALERT_COMMENT);
 			CallServiceDAOImplementation.upsertAlert(this.alert);
 			return;
 		} else {
@@ -103,6 +122,11 @@ public class OpenAlertHandler extends Thread {
 					"Failed to get ssml content using send message API for site number: " + alert.getSiteNumber() + " system number: " + alert.getSystemNumber() +
 					" alarm incident number: " + this.alert.getAlarmIncidentNumber()); 
 			this.alert.setActiveAlert(false);
+			this.alert.setCurrentWriteEventCode(Constants.FAILED_ALERT_CODE_EVENT);
+			this.alert.setFullClearStatus(Constants.FULL_CLEAR_FLAG_YES);
+			// update that alert handling failed
+			Utils.updateEvent(this.alert.getSystemNumber(), this.alert.getAlarmIncidentNumber(), this.alert.getCurrentWriteEventCode(),
+					this.alert.getFullClearStatus(), Constants.FAILED_ALERT_COMMENT);
 			CallServiceDAOImplementation.upsertAlert(this.alert);
 			return;
 		} else {
@@ -119,6 +143,11 @@ public class OpenAlertHandler extends Thread {
 			this.alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_ERROR,
 					"Failed to create audio file from SSML content: " + ssmlText); 
 			this.alert.setActiveAlert(false);
+			this.alert.setCurrentWriteEventCode(Constants.FAILED_ALERT_CODE_EVENT);
+			this.alert.setFullClearStatus(Constants.FULL_CLEAR_FLAG_YES);
+			// update that alert handling failed
+			Utils.updateEvent(this.alert.getSystemNumber(), this.alert.getAlarmIncidentNumber(), this.alert.getCurrentWriteEventCode(),
+					this.alert.getFullClearStatus(), Constants.FAILED_ALERT_COMMENT);
 			CallServiceDAOImplementation.upsertAlert(this.alert);
 			return;
 		} else {
@@ -141,6 +170,11 @@ public class OpenAlertHandler extends Thread {
 			this.alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_ERROR,
 					"Failed to create call to vonage to number: " + phoneNumber); 
 			this.alert.setActiveAlert(false);
+			this.alert.setCurrentWriteEventCode(Constants.FAILED_ALERT_CODE_EVENT);
+			this.alert.setFullClearStatus(Constants.FULL_CLEAR_FLAG_YES);
+			// update that alert handling failed
+			Utils.updateEvent(this.alert.getSystemNumber(), this.alert.getAlarmIncidentNumber(), this.alert.getCurrentWriteEventCode(),
+					this.alert.getFullClearStatus(), Constants.FAILED_ALERT_COMMENT);
 			CallServiceDAOImplementation.upsertAlert(this.alert);
 			return;
 		} else {
@@ -176,6 +210,13 @@ public class OpenAlertHandler extends Thread {
 		}
 		CallServiceDAOImplementation.upsertAlert(this.alert);
 		
+	}
+	
+	private String getCustomMessageIdFromAlarmEventId() {
+		if(this.alert.getAlarmEventId().startsWith(Constants.ABNORMAL_OPENING_CODE_PREFIX)) {
+			return Constants.ABNORMAL_OPENING_MESSAGE_ID;
+		}
+		return null;
 	}
 
 }

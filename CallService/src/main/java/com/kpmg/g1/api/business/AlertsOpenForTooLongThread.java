@@ -38,6 +38,11 @@ public class AlertsOpenForTooLongThread extends Thread {
 					openAlert.setAlertHandlingStatusCode(Constants.OPEN_FOR_TOO_LONG);
 					openAlert.setAlertHandlingStatusMessage("open for too long");
 					openAlert.setUpdatedAt(Utils.getTimestampFromDate(null));
+					openAlert.setCurrentWriteEventCode(Constants.FAILED_ALERT_CODE_EVENT);
+					openAlert.setFullClearStatus(Constants.FULL_CLEAR_FLAG_YES);
+					// update that alert handling failed
+					Utils.updateEvent(openAlert.getSystemNumber(), openAlert.getAlarmIncidentNumber(), openAlert.getCurrentWriteEventCode(),
+							openAlert.getFullClearStatus(), Constants.FAILED_ALERT_COMMENT);
 					CallServiceDAOImplementation.upsertAlert(openAlert);
 				}
 			}

@@ -23,6 +23,7 @@ public class Constants {
 	public final static String WRITE_EVENT_CODE_NO_ANSWER = "+9";
 	public final static String WRITE_EVENT_RECEIVED_USER_ANSWER = "+23";
 	public final static String WRITE_EVENT_SUCCESSFUL_SMS_SENT = "MSG121";
+	public final static String FAILED_ALERT_CODE_EVENT = "AUT130";
 	
 	public final static String FULL_CLEAR_FLAG_NO = "N";
 	public final static String FULL_CLEAR_FLAG_YES = "Y";
@@ -67,7 +68,7 @@ public class Constants {
 	public final static String TEXT_TO_SPEECH_COLUMN = "messageId";
 	
 	public final static String GET_KID_BY_VONAGE_UUID = "SELECT kId FROM Alerts WHERE vonageCurrentConversationId = ?";
-	public final static String GET_DISPATCH_LOCATION_BY_VONAGE_UUID = "SELECT DISTINCT dispatchLocation FROM Alerts WHERE vonageCurrentConversationId = ?";
+	public final static String GET_DISPATCH_LOCATION_BY_VONAGE_UUID = "SELECT DISTINCT dispatchLocation, alarmEventId FROM Alerts WHERE vonageCurrentConversationId = ?";
 	public final static String GET_FILE_LOCATION_BY_VONAGE_UUID = "SELECT textToSpeechFileLocation FROM Alerts WHERE vonageCurrentConversationId = ?";
 	public final static String GET_ALERT_DATA_BY_VONAGE_UUID = "SELECT * FROM Alerts WHERE vonageCurrentConversationId = ?";
 	public final static String GET_OPEN_ALERTS_BY_SITE_NO_PREFIX = "SELECT * FROM Alerts WHERE siteNumber IN (";
@@ -85,7 +86,13 @@ public class Constants {
 	public final static String COMMENT_NO_ANSWER_PREFIX = "אין מענה: ";
 	public final static String COMMENT_ANSWER_PREFIX = "מענה: ";
 	
+	public final static String FAILED_ALERT_COMMENT = "כשל בטיפול אירוע ע\"י הרובוט, יש לטפל בקריאה";
+	
 	public final static int DEFAULT_CONVERSATION_AS_ANSWERED_IN_SECONDS = 30;
+	
+	public final static String ABNORMAL_OPENING_CODE_PREFIX = "40";
+	
+	public final static String ABNORMAL_OPENING_MESSAGE_ID = "1.פתיח";
 	
 	public final static String GET_MESSAGE_ID_BY_EVENT_ID = "SELECT messageId FROM TextToSpeechMessages WHERE eventId = ?";
 	
