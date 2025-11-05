@@ -9,6 +9,7 @@ import com.kpmg.g1.api.cache.ConversationsUUIDCache;
 import com.kpmg.g1.api.dao.CallServiceDAOImplementation;
 import com.kpmg.g1.api.objects.model.Alert;
 import com.kpmg.g1.api.utils.Constants;
+import com.kpmg.g1.api.utils.JSONConfigurations;
 import com.kpmg.g1.api.utils.Utils;
 
 public class OpenAlertHandler extends Thread {
@@ -49,7 +50,7 @@ public class OpenAlertHandler extends Thread {
 		this.alert.setFullClearStatus(Constants.FULL_CLEAR_FLAG_NO);
 		// update event with G1 API to acknowledge it
 		JSONObject updateEventOfDuplicateAlertResponse = Utils.updateEvent(this.alert.getSystemNumber(), this.alert.getAlarmIncidentNumber(), this.alert.getCurrentWriteEventCode(),
-				this.alert.getFullClearStatus(), "");
+				this.alert.getFullClearStatus(), "", Constants.FULL_CLEAR_FLAG_NO);
 		if (updateEventOfDuplicateAlertResponse == null) {
 			this.alert.setAlertHandlingStatusCode(Constants.GENERAL_G1_RUNTIME_ERROR);
 			this.alert.setAlertHandlingStatusMessage("Failed to update event due to error in write-event API");
@@ -60,7 +61,11 @@ public class OpenAlertHandler extends Thread {
 			this.alert.setFullClearStatus(Constants.FULL_CLEAR_FLAG_YES);
 			// update that alert handling failed
 			Utils.updateEvent(this.alert.getSystemNumber(), this.alert.getAlarmIncidentNumber(), this.alert.getCurrentWriteEventCode(),
-					this.alert.getFullClearStatus(), Constants.FAILED_ALERT_COMMENT);
+					this.alert.getFullClearStatus(), Constants.FAILED_ALERT_COMMENT, Constants.FULL_CLEAR_FLAG_YES);
+			Utils.sendSmsDirect(Integer.parseInt(this.alert.getSiteNumber()), 
+					JSONConfigurations.getInstance().getConfigurations().getString("errorNotificationPhoneNumber"), this.alert.getCsNumber(),
+					JSONConfigurations.getInstance().getConfigurations().getString("errorNotificationSubject"),
+					JSONConfigurations.getInstance().getConfigurations().getString("errorNotificationMessage"));
 			CallServiceDAOImplementation.upsertAlert(this.alert);
 			return;
 		} else {
@@ -79,12 +84,16 @@ public class OpenAlertHandler extends Thread {
 			this.alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_ERROR,
 					"Failed to to find matching messageId for eventId: " + alert.getAlarmEventId());
 			this.alert.setActiveAlert(false);
-			CallServiceDAOImplementation.upsertAlert(this.alert);
 			this.alert.setCurrentWriteEventCode(Constants.FAILED_ALERT_CODE_EVENT);
 			this.alert.setFullClearStatus(Constants.FULL_CLEAR_FLAG_YES);
+			Utils.sendSmsDirect(Integer.parseInt(this.alert.getSiteNumber()), 
+					JSONConfigurations.getInstance().getConfigurations().getString("errorNotificationPhoneNumber"), this.alert.getCsNumber(),
+					JSONConfigurations.getInstance().getConfigurations().getString("errorNotificationSubject"),
+					JSONConfigurations.getInstance().getConfigurations().getString("errorNotificationMessage"));
 			// update that alert handling failed
 			Utils.updateEvent(this.alert.getSystemNumber(), this.alert.getAlarmIncidentNumber(), this.alert.getCurrentWriteEventCode(),
-					this.alert.getFullClearStatus(), Constants.FAILED_ALERT_COMMENT);
+					this.alert.getFullClearStatus(), Constants.FAILED_ALERT_COMMENT, Constants.FULL_CLEAR_FLAG_YES);
+			CallServiceDAOImplementation.upsertAlert(this.alert);
 			return;
 		} else {
 			this.alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_INFO,
@@ -103,7 +112,11 @@ public class OpenAlertHandler extends Thread {
 			this.alert.setFullClearStatus(Constants.FULL_CLEAR_FLAG_YES);
 			// update that alert handling failed
 			Utils.updateEvent(this.alert.getSystemNumber(), this.alert.getAlarmIncidentNumber(), this.alert.getCurrentWriteEventCode(),
-					this.alert.getFullClearStatus(), Constants.FAILED_ALERT_COMMENT);
+					this.alert.getFullClearStatus(), Constants.FAILED_ALERT_COMMENT, Constants.FULL_CLEAR_FLAG_YES);
+			Utils.sendSmsDirect(Integer.parseInt(this.alert.getSiteNumber()), 
+					JSONConfigurations.getInstance().getConfigurations().getString("errorNotificationPhoneNumber"), this.alert.getCsNumber(),
+					JSONConfigurations.getInstance().getConfigurations().getString("errorNotificationSubject"),
+					JSONConfigurations.getInstance().getConfigurations().getString("errorNotificationMessage"));
 			CallServiceDAOImplementation.upsertAlert(this.alert);
 			return;
 		} else {
@@ -126,7 +139,11 @@ public class OpenAlertHandler extends Thread {
 			this.alert.setFullClearStatus(Constants.FULL_CLEAR_FLAG_YES);
 			// update that alert handling failed
 			Utils.updateEvent(this.alert.getSystemNumber(), this.alert.getAlarmIncidentNumber(), this.alert.getCurrentWriteEventCode(),
-					this.alert.getFullClearStatus(), Constants.FAILED_ALERT_COMMENT);
+					this.alert.getFullClearStatus(), Constants.FAILED_ALERT_COMMENT, Constants.FULL_CLEAR_FLAG_YES);
+			Utils.sendSmsDirect(Integer.parseInt(this.alert.getSiteNumber()), 
+					JSONConfigurations.getInstance().getConfigurations().getString("errorNotificationPhoneNumber"), this.alert.getCsNumber(),
+					JSONConfigurations.getInstance().getConfigurations().getString("errorNotificationSubject"),
+					JSONConfigurations.getInstance().getConfigurations().getString("errorNotificationMessage"));
 			CallServiceDAOImplementation.upsertAlert(this.alert);
 			return;
 		} else {
@@ -147,8 +164,12 @@ public class OpenAlertHandler extends Thread {
 			this.alert.setFullClearStatus(Constants.FULL_CLEAR_FLAG_YES);
 			// update that alert handling failed
 			Utils.updateEvent(this.alert.getSystemNumber(), this.alert.getAlarmIncidentNumber(), this.alert.getCurrentWriteEventCode(),
-					this.alert.getFullClearStatus(), Constants.FAILED_ALERT_COMMENT);
+					this.alert.getFullClearStatus(), Constants.FAILED_ALERT_COMMENT, Constants.FULL_CLEAR_FLAG_YES);
 			CallServiceDAOImplementation.upsertAlert(this.alert);
+			Utils.sendSmsDirect(Integer.parseInt(this.alert.getSiteNumber()), 
+					JSONConfigurations.getInstance().getConfigurations().getString("errorNotificationPhoneNumber"), this.alert.getCsNumber(),
+					JSONConfigurations.getInstance().getConfigurations().getString("errorNotificationSubject"),
+					JSONConfigurations.getInstance().getConfigurations().getString("errorNotificationMessage"));
 			return;
 		} else {
 			this.alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_INFO,
@@ -174,7 +195,11 @@ public class OpenAlertHandler extends Thread {
 			this.alert.setFullClearStatus(Constants.FULL_CLEAR_FLAG_YES);
 			// update that alert handling failed
 			Utils.updateEvent(this.alert.getSystemNumber(), this.alert.getAlarmIncidentNumber(), this.alert.getCurrentWriteEventCode(),
-					this.alert.getFullClearStatus(), Constants.FAILED_ALERT_COMMENT);
+					this.alert.getFullClearStatus(), Constants.FAILED_ALERT_COMMENT, Constants.FULL_CLEAR_FLAG_YES);
+			Utils.sendSmsDirect(Integer.parseInt(this.alert.getSiteNumber()), 
+					JSONConfigurations.getInstance().getConfigurations().getString("errorNotificationPhoneNumber"), this.alert.getCsNumber(),
+					JSONConfigurations.getInstance().getConfigurations().getString("errorNotificationSubject"),
+					JSONConfigurations.getInstance().getConfigurations().getString("errorNotificationMessage"));
 			CallServiceDAOImplementation.upsertAlert(this.alert);
 			return;
 		} else {
@@ -193,12 +218,12 @@ public class OpenAlertHandler extends Thread {
 		this.alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_INFO,
 				"successfuly retrieved alert and found that it is a duplicate of alert with id: " + this.alert.getInCaseOfDuplicateCurrentAlertId());
 		this.alert.setCurrentWriteEventCode(Constants.WRITE_EVENT_CODE_DUPLICATE);
-		this.alert.setFullClearStatus(Constants.FULL_CLEAR_FLAG_NO);
+		this.alert.setFullClearStatus(Constants.FULL_CLEAR_FLAG_YES);
 		this.alert.setAlertHandlingStatusCode(Constants.DUPLICATE_ALERT_STATUS_CODE);
 		this.alert.setAlertHandlingStatusMessage("Alert is a duplicate. site has already have an open alert");
 		// try to update alert with relevant code and update its value in DB
 		JSONObject updateEventOfDuplicateAlertResponse = Utils.updateEvent(this.alert.getSystemNumber(), this.alert.getAlarmIncidentNumber(), this.alert.getCurrentWriteEventCode(),
-				this.alert.getFullClearStatus(), "");
+				this.alert.getFullClearStatus(), "", Constants.FULL_CLEAR_FLAG_NO);
 		if (updateEventOfDuplicateAlertResponse == null) {
 			this.alert.setAlertHandlingStatusCode(Constants.GENERAL_G1_RUNTIME_ERROR);
 			this.alert.setAlertHandlingStatusMessage("Failed to update event due to error in write-event API");

@@ -135,9 +135,10 @@ public class Utils {
 			String customerResponseToCall = "";
 			String alertDate = getUtcTimeFromIdtTime(alertObject.getString("alarm_date"));
 			String alertZoneId = alertObject.getString("alarm_zone_id").trim();
+			String csNumber =  alertObject.getString("cs_no");
 			return new Alert(kId, createdAt, updatedAt, siteNumber, systemNumber, alarmIncidentNumber, dispatchLocation, alaramEventId, currentWriteEventCode, fullClearStatus,
 					isActiveAlert, alertHandlingStatusCode, alertHandlingStatusMessage, progressMessages, contacts, callGeneratedText, textToSpeechFileLocation,
-					vonageCurrentConversationId, answeredPhoneNumber, orderOfAnsweredCall, vonageConversationLength, customerResponseToCall, alertDate, alertZoneId);
+					vonageCurrentConversationId, answeredPhoneNumber, orderOfAnsweredCall, vonageConversationLength, customerResponseToCall, alertDate, alertZoneId, csNumber);
 		} catch (Exception e) {
 			log.error("Failed to build alert object from open alert data with object: " + alertObject.toString() + " Error: " + ExceptionUtils.getStackTrace(e));
 			return null;
@@ -192,7 +193,7 @@ public class Utils {
 		try {
 			// build url and create client
 			String url = JSONConfigurations.getInstance().getConfigurations().getString("g1ServicesBaseUrl")
-					+ "/api/alerts";
+					+ "/api/alarms";
 			CloseableHttpClient client = HttpClientBuilder.create().build();
 			HttpGet get = new HttpGet(url);
 			CloseableHttpResponse response = null;
@@ -213,7 +214,7 @@ public class Utils {
 		}
 	}
 	
-	public static JSONObject updateEvent(String systemNumber, String alarmIncidentNumber, String alarmEventId, String alarmFullClearFlag, String comment) {
+	public static JSONObject updateEvent(String systemNumber, String alarmIncidentNumber, String alarmEventId, String alarmFullClearFlag, String comment, String fcAllSystems) {
 		// build url using kid
 		String url = JSONConfigurations.getInstance().getConfigurations().getString("g1ServicesBaseUrl")
 				+ "/api/write-event";
@@ -228,9 +229,10 @@ public class Utils {
 		JSONObject requsetDataObject = new JSONObject();
 		try {
 			requsetDataObject.put("system_no", systemNumber).put("alarminc_no", alarmIncidentNumber).put("event_id", alarmEventId).put("comment", comment)
-			.put("full_clear_flag", alarmFullClearFlag).put("emp_no", JSONConfigurations.getInstance().getConfigurations().getString("g1EventsApiEmpNo"))
+			.put("full_clear_flag", alarmFullClearFlag).put("emp_no", JSONConfigurations.getInstance().getConfigurations().getInt("g1EventsApiEmpNo"))
 			.put("user_name", JSONConfigurations.getInstance().getConfigurations().getString("g1EventsApiUserName")).put("additional_info", "")
-			.put("test_seqno", 0).put("phone", "").put("scheduled_date", Utils.getTimestampFromDate(null)).put("alarminc_call_seqno", 0).put("aux2", "");
+			.put("test_seqno", 0).put("phone", "").put("scheduled_date", Utils.getTimestampFromDate(null)).put("alarminc_call_seqno", 0).put("aux2", "")
+			.put("fc_all_systems", Constants.FULL_CLEAR_FLAG_NO);
 		} catch (Exception e) {
 			log.error("Received Exception while trying to build events api request with values: systemNumber - " + systemNumber + " alarmIncidentNumber: " + alarmIncidentNumber +
 					" alarmEventId: " + alarmEventId + " comment: " + comment + " alarmFullClearFlag: " + alarmFullClearFlag + " .Error: " + ExceptionUtils.getStackTrace(e));
@@ -328,6 +330,51 @@ public class Utils {
 			log.error("Received Exception when trying to call send message API value - site number: " + siteNumber + ", system number: " + systemNumber
 					+ " alarm incident number: " + alarmIncidentNumber + " messageId: " + messageId + " sendMessage: " + String.valueOf(sendMessage)
 					+ " phoneNumber: " + phoneNumber + " .Error: " + ExceptionUtils.getStackTrace(e));
+			return null;
+		} finally {
+			try {
+				response.close();
+				client.close();
+			} catch (Exception e) {
+			}
+		}
+	}
+	
+	public static JSONObject sendSmsDirect(int siteNumber, String phoneNumber, String csNumber, String subject, String message) {
+		// build url using kid
+		String url = JSONConfigurations.getInstance().getConfigurations().getString("g1ServicesBaseUrl")
+				+ "/api/send-sms-direct";
+
+		CloseableHttpClient client = HttpClientBuilder.create().build();
+		HttpPost post = new HttpPost(url);
+		CloseableHttpResponse response = null;
+
+		post.setHeader("Accept", "application/json");
+		post.setHeader("Content-Type", "application/json");
+		
+		JSONObject requsetDataObject = new JSONObject();
+		requsetDataObject.put("phone_number", phoneNumber).put("site_no", siteNumber).put("cs_no", csNumber).put("subject", subject)
+		.put("message", message);
+		
+		// add request body data
+		StringEntity input = new StringEntity(requsetDataObject.toString(), "UTF-8");
+		input.setContentType("application/json");
+		post.setEntity(input);
+
+		try {
+			// send requset
+			response = client.execute(post);
+			String responseData = EntityUtils.toString(response.getEntity(), "UTF-8");
+			// if response is valid return
+			if (response.getStatusLine().getStatusCode() == 200) {
+				return new JSONObject(responseData);
+			}
+			throw new RuntimeException(responseData);
+
+		} catch (Exception e) {
+			log.error("Received Exception when trying to call send direct sms API value - site number: " + String.valueOf(siteNumber) + ", phone number: " + phoneNumber
+					+ " cs number: " + csNumber + " subject: " + subject + " message: " + message
+					+ " .Error: " + ExceptionUtils.getStackTrace(e));
 			return null;
 		} finally {
 			try {
@@ -446,8 +493,12 @@ public class Utils {
 		return null;
 	}
 	
-	public static boolean allowTransferToDispatchAllAlertsTime(String alertCode) {
+	// allTimeDispatch is set until G1 will handle dispatch logic on their side 
+	public static boolean allowTransferToDispatchAllAlertsTime(String alertCode, boolean allTimeDispatch) {
 		try {
+			if (allTimeDispatch) {
+				return true;
+			}
 			// check if given alert code is part of codes that are allowed to be passed to dispatch at any time
 			JSONArray alertCodesAlwaysAllowPass = JSONConfigurations.getInstance().getConfigurations().getJSONObject("dispatchTransfer").getJSONArray("alertCodesAlwaysAllowPass");
 			for (int i = 0; i < alertCodesAlwaysAllowPass.length(); i++) {

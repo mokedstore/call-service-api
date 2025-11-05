@@ -165,7 +165,9 @@ public class Vonage {
 		} else {
 		  CallServiceDAOImplementation.insertConversation(conversationObject);
 		  // continue business use case based on event status (only relevant events are timeout/hangup or answered)
-		  if (requestBodyObj.optString("status", "").equals("timeout") || requestBodyObj.optString("status", "").equals("unanswered")) {
+		  if (requestBodyObj.optString("status", "").equals("timeout") || requestBodyObj.optString("status", "").equals("unanswered") ||
+				  (requestBodyObj.optString("status", "").equals("completed") && requestBodyObj.optString("detail", "").equals("remote_busy"))
+				  || (requestBodyObj.optString("status", "").equals("busy") && requestBodyObj.optString("detail", "").equals("remote_busy"))){
 			  UnansweredConversationThread unansweredConversationThread = new UnansweredConversationThread(requestBodyObj.getString("uuid"));
 			  unansweredConversationThread.start();
 		  } else if (requestBodyObj.optString("status", "").equals("completed") && requestBodyObj.optString("detail", "").equals("ok")) {
@@ -251,7 +253,8 @@ public class Vonage {
 						ncco = new JSONArray(nccoStr);
 					} else {
 						String alarmEventId = dispatchLocationAndAlarmEventId.getString("alarmEventId");
-						boolean transferToDispatch = Utils.allowTransferToDispatchAllAlertsTime(alarmEventId);
+						// setting 
+						boolean transferToDispatch = Utils.allowTransferToDispatchAllAlertsTime(alarmEventId, true);
 						if (transferToDispatch) {
 							String dispatchPhoneNumber = "";
 							String dispatchLocationId = dispatchLocationAndAlarmEventId.getString("dispatchLocation");

@@ -124,7 +124,8 @@ public class UnansweredConversationThread extends Thread {
 		// in case moved to new contact send write event with status +9 with current contact details indicating he didn't answer
 		if ((!currentUnansweredContact.getString("phone").equals(nextContact.getString("phone"))) || (!currentUnansweredContact.getString("name").equals(nextContact.getString("name")))) {
 			JSONObject updateEventOfUnansweredCallResponse = Utils.updateEvent(alert.getSystemNumber(), alert.getAlarmIncidentNumber(), Constants.WRITE_EVENT_CODE_NO_ANSWER,
-					Constants.FULL_CLEAR_FLAG_NO, Constants.COMMENT_NO_ANSWER_PREFIX + currentUnansweredContact.getString("name") +"," + currentUnansweredContact.getString("phone"));
+					Constants.FULL_CLEAR_FLAG_NO,
+					Constants.COMMENT_NO_ANSWER_PREFIX + currentUnansweredContact.getString("name") +"," + currentUnansweredContact.getString("phone"), Constants.FULL_CLEAR_FLAG_NO);
 			if (updateEventOfUnansweredCallResponse == null) {
 				alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_ERROR,
 						"Failed to update write-event API with status + of unasnwered call of contact: " 
@@ -134,7 +135,7 @@ public class UnansweredConversationThread extends Thread {
 				return;
 			} else {
 				alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_INFO,
-						"successfuly updated write event api with code: " + Constants.WRITE_EVENT_CODE_NO_ANSWER + " and flag  " + Constants.FULL_CLEAR_FLAG_NO
+						"successfuly updated write event api with code: " + Constants.WRITE_EVENT_CODE_NO_ANSWER + " and flag " + Constants.FULL_CLEAR_FLAG_NO
 						+ " of contact: " + currentUnansweredContact.getString("name") + " with phone: " + currentUnansweredContact.getString("phone"));
 			}
 		}
@@ -149,6 +150,10 @@ public class UnansweredConversationThread extends Thread {
 					"Failed to create call to vonage to number: " + phoneNumber); 
 			alert.setActiveAlert(false);
 			alert.setUpdatedAt(Utils.getTimestampFromDate(null));
+			Utils.sendSmsDirect(Integer.parseInt(alert.getSiteNumber()), 
+					JSONConfigurations.getInstance().getConfigurations().getString("errorNotificationPhoneNumber"), alert.getCsNumber(),
+					JSONConfigurations.getInstance().getConfigurations().getString("errorNotificationSubject"),
+					JSONConfigurations.getInstance().getConfigurations().getString("errorNotificationMessage"));
 			CallServiceDAOImplementation.upsertAlert(alert);
 			return;
 		} else {
@@ -180,8 +185,9 @@ public class UnansweredConversationThread extends Thread {
 		alert.setFullClearStatus(Constants.FULL_CLEAR_FLAG_YES);
 		// update event with G1 API to acknowledge it
 		JSONObject updateEventOfUnansweredAlertResponse = Utils.updateEvent(alert.getSystemNumber(), alert.getAlarmIncidentNumber(), alert.getCurrentWriteEventCode(),
-				alert.getFullClearStatus(), Constants.COMMENT_NO_ANSWER_PREFIX + lastContact.getString("name") +"," + lastContact.getString("phone"));
+				alert.getFullClearStatus(), Constants.COMMENT_NO_ANSWER_PREFIX + lastContact.getString("name") +"," + lastContact.getString("phone"), Constants.FULL_CLEAR_FLAG_YES);
 		if (updateEventOfUnansweredAlertResponse == null) {
+			alert.setActiveAlert(false);
 			alert.setAlertHandlingStatusCode(Constants.GENERAL_G1_RUNTIME_ERROR);
 			alert.setAlertHandlingStatusMessage("Failed to update event due to error in write-event API");
 			alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_ERROR,
@@ -192,54 +198,55 @@ public class UnansweredConversationThread extends Thread {
 		} else {
 			alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_INFO,
 					"successfuly updated write event api with code: " + alert.getCurrentWriteEventCode() + " and flag " + alert.getFullClearStatus()
-					+ "of contact: " + lastContact.getString("name") + " with phone: " + lastContact.getString("phone"));
+					+ " of contact: " + lastContact.getString("name") + " with phone: " + lastContact.getString("phone"));
 		}
-		// send SMS message to each contact
-		String messageId = CallServiceDAOImplementation.getMessageIdByEventIdForTextToSpeech(Constants.NO_RESPONSE_SMS_CONTENT_MESSAGE_ID);
+		// Get message id in order to create text to speech file
+		String messageId = CallServiceDAOImplementation.getMessageIdByEventIdForTextToSpeech(alert.getAlarmEventId());
+		// in case message id is null check for custom rules
 		if (messageId == null) {
-			log.error("Failed to get message id for send SMS after received no response from any contact for alert: " + alert.getAlarmIncidentNumber());
+			messageId = getCustomMessageIdFromAlarmEventId(alert);
+		}
+		if (messageId == null) {
 			alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_ERROR,
-					"Failed to get message id for send SMS after received no response from any contact for alert");
+					"Failed to to find matching messageId for eventId: " + alert.getAlarmEventId() + " for sending SMS. Will not send SMS Message to non-answering contacts");
+			log.error("Failed to to find matching messageId for eventId: " + alert.getAlarmEventId() + " for sending SMS. Will not send SMS Message to non-answering contacts");
 		} else {
-			int successSendMessageCounter = 0;
-			for (int i = 0; i < contacts.length(); i++) {
-				JSONObject currentContact = contacts.getJSONObject(i);
-				JSONObject sendSmsResponseObject = Utils.sendMessage(alert.getSiteNumber(), alert.getSystemNumber(),
-						alert.getAlarmIncidentNumber(), messageId, true, currentContact.getString("phone"));
-				if (sendSmsResponseObject == null) {
-					log.error("Failed to send SMS to contact: " + currentContact.getString("name") + " with phone: " + currentContact.getString("phone")
-						+ " with alert: " + alert.getAlarmIncidentNumber());
-					alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_ERROR,
-							"Failed to send SMS to contact: " + currentContact.getString("name") + " with phone: " + currentContact.getString("phone"));
-					
-				} else {
-					// send successful send message write event and increase counter
-					JSONObject updateEventSendSMSResponse = Utils.updateEvent(alert.getSystemNumber(), alert.getAlarmIncidentNumber(), Constants.WRITE_EVENT_SUCCESSFUL_SMS_SENT,
-							Constants.FULL_CLEAR_FLAG_YES, currentContact.getString("name") +"," + currentContact.getString("phone"));
-					successSendMessageCounter++;
-					if (updateEventSendSMSResponse == null) {
-						log.error("Failed to send write event of successful SMS sending for unanswered alert " + 
-									" to contact: " + currentContact.getString("name") + " with phone: " + currentContact.getString("phone") + " with alert: " + alert.getAlarmIncidentNumber());
-						alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_ERROR,
-								"Failed to send write event of successful SMS sending for unanswered alert: " + currentContact.getString("name") + " with phone: " + currentContact.getString("phone"));
-					} else {
-						alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_INFO,
-								"successfuly updated write event api with code: " + Constants.WRITE_EVENT_SUCCESSFUL_SMS_SENT + " and flag " + Constants.FULL_CLEAR_FLAG_YES
-								+ "of contact: " + currentContact.getString("name") + " with phone: " + currentContact.getString("phone"));
-					}
-				}
-			}
-			if (successSendMessageCounter == contacts.length()) {
-				alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_INFO,
-						"Successfuly sent SMS to all contacts after received no answer by call"); 
+			JSONObject mainContact = contacts.getJSONObject(0);
+			JSONObject sendSmsResponseObject = Utils.sendMessage(alert.getSiteNumber(), alert.getSystemNumber(),
+					alert.getAlarmIncidentNumber(), messageId, true, mainContact.getString("phone"));
+			if (sendSmsResponseObject == null) {
+				log.error("Failed to send SMS to contact: " + mainContact.getString("name") + " with phone: " + mainContact.getString("phone")
+					+ " with alert: " + alert.getAlarmIncidentNumber());
+				alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_ERROR,
+						"Failed to send SMS to contact: " + mainContact.getString("name") + " with phone: " + mainContact.getString("phone"));
+				
 			} else {
-				alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_INFO,
-						"Successfuly sent " + String.valueOf(successSendMessageCounter) + " SMS out of " + String.valueOf(contacts.length()) + " Check logs for SMS send failures");
+				// send successful send message write event and increase counter
+				JSONObject updateEventSendSMSResponse = Utils.updateEvent(alert.getSystemNumber(), alert.getAlarmIncidentNumber(), Constants.WRITE_EVENT_SUCCESSFUL_SMS_SENT,
+						Constants.FULL_CLEAR_FLAG_YES, mainContact.getString("name") +"," + mainContact.getString("phone"), Constants.FULL_CLEAR_FLAG_YES);
+				if (updateEventSendSMSResponse == null) {
+					log.error("Failed to send write event of successful SMS sending for unanswered alert " + 
+								" to contact: " + mainContact.getString("name") + " with phone: " + mainContact.getString("phone") + " with alert: " + alert.getAlarmIncidentNumber());
+					alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_ERROR,
+							"Failed to send write event of successful SMS sending for unanswered alert: " + mainContact.getString("name") + " with phone: " + mainContact.getString("phone"));
+				} else {
+					alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_INFO,
+							"successfuly updated write event api with code: " + Constants.WRITE_EVENT_SUCCESSFUL_SMS_SENT + " and clear flag " + Constants.FULL_CLEAR_FLAG_YES
+							+ " and all_system flag" + Constants.FULL_CLEAR_FLAG_YES + " of contact: " + mainContact.getString("name") + " with phone: " + mainContact.getString("phone"));
+				}
 			}
 		}
 		
+		alert.setActiveAlert(false);
 		alert.setUpdatedAt(Utils.getTimestampFromDate(null));
 		CallServiceDAOImplementation.upsertAlert(alert);
 		
+	}
+		
+	private static String getCustomMessageIdFromAlarmEventId(Alert alert) {
+		if(alert.getAlarmEventId().startsWith(Constants.ABNORMAL_OPENING_CODE_PREFIX)) {
+			return Constants.ABNORMAL_OPENING_MESSAGE_ID;
+		}
+		return null;
 	}
 }

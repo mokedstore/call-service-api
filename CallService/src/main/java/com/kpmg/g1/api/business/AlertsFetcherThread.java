@@ -37,11 +37,13 @@ public class AlertsFetcherThread extends Thread {
 					log.error("Error occurred while trying to sleep in AlertsFetcherThread between alert calls. " + ExceptionUtils.getStackTrace(e));
 				}
 				JSONArray openAlerts = Utils.getOpenAlerts();
-				log.info("Found " + openAlerts.length() + " open alerts.");
-				if (openAlerts.length() > 0) {
-					handleNewOpenAlerts(openAlerts);
+				if(openAlerts != null) {
+					log.info("Found " + openAlerts.length() + " open alerts.");
+					if (openAlerts.length() > 0) {
+						handleNewOpenAlerts(openAlerts);
+					}
+					log.info("Finished handling current new alerts");
 				}
-				log.info("Finished handling current new alerts");
 			}
 			log.info("AlertsFetcherThread was gracefully terminated");
 		} else {

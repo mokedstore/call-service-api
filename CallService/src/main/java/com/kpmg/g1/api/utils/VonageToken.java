@@ -26,7 +26,7 @@ public class VonageToken {
 	}
 	
 	public static VonageToken getInstance() {
-		if (instance == null || instance.getTokenExpirationDate().isAfter(ZonedDateTime.now(ZoneId.of("UTC")))) {
+		if (instance == null || instance.getTokenExpirationDate().isBefore(ZonedDateTime.now(ZoneId.of("UTC")))) {
 			VonageToken newTokenData = generateToken();
 			if (newTokenData == null) {
 				return null;

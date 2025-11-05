@@ -8,6 +8,7 @@ import org.json.JSONObject;
 import com.kpmg.g1.api.dao.CallServiceDAOImplementation;
 import com.kpmg.g1.api.objects.model.Alert;
 import com.kpmg.g1.api.utils.Constants;
+import com.kpmg.g1.api.utils.JSONConfigurations;
 import com.kpmg.g1.api.utils.Utils;
 
 public class AnsweredConversationThread extends Thread {
@@ -69,7 +70,7 @@ public class AnsweredConversationThread extends Thread {
 		// fetch Alert object from DB by vonage uuid
 		Alert alert = CallServiceDAOImplementation.getAlertByVonageUuid(this.vonageUuid);
 		if (alert == null) {
-			log.warn("Received vonage UUID: " + this.vonageUuid + " which does not have a matching Alert object in Alerts table! check ASAP");
+			log.warn("Received vonage UUID: " + this.vonageUuid + " which does not have a matching Alert object in Alerts table. If call was transfered to dispatch. ignore this message");
 			return;
 		}
 		alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_INFO,
@@ -94,13 +95,22 @@ public class AnsweredConversationThread extends Thread {
 		alert.setFullClearStatus(Constants.FULL_CLEAR_FLAG_YES);
 		String writeEventComment = Constants.COMMENT_ANSWER_PREFIX + answeredContactName + "," + answeredContactPhone;
 		JSONObject updateEventOfValidAlertResponse = Utils.updateEvent(alert.getSystemNumber(), alert.getAlarmIncidentNumber(), alert.getCurrentWriteEventCode(),
-				alert.getFullClearStatus(), writeEventComment);
+				alert.getFullClearStatus(), writeEventComment, Constants.FULL_CLEAR_FLAG_YES);
 		if (updateEventOfValidAlertResponse == null) {
 			alert.setAlertHandlingStatusCode(Constants.GENERAL_G1_RUNTIME_ERROR);
 			alert.setAlertHandlingStatusMessage("Failed to update event due to error in write-event API");
 			alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_ERROR,
 					"Failed to update write-event API");
 			alert.setUpdatedAt(Utils.getTimestampFromDate(null));
+			alert.setActiveAlert(false);
+			alert.setCurrentWriteEventCode(Constants.FAILED_ALERT_CODE_EVENT);
+			alert.setFullClearStatus(Constants.FULL_CLEAR_FLAG_YES);
+			Utils.updateEvent(alert.getSystemNumber(), alert.getAlarmIncidentNumber(), alert.getCurrentWriteEventCode(),
+					alert.getFullClearStatus(), Constants.FAILED_ALERT_COMMENT, Constants.FULL_CLEAR_FLAG_YES);
+			Utils.sendSmsDirect(Integer.parseInt(alert.getSiteNumber()), 
+					JSONConfigurations.getInstance().getConfigurations().getString("errorNotificationPhoneNumber"), alert.getCsNumber(),
+					JSONConfigurations.getInstance().getConfigurations().getString("errorNotificationSubject"),
+					JSONConfigurations.getInstance().getConfigurations().getString("errorNotificationMessage"));
 			CallServiceDAOImplementation.upsertAlert(alert);
 			return;
 		} else {

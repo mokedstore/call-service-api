@@ -63,6 +63,7 @@ public class Constants {
 	public final static String ALERT_COLUMN_CUSTOMER_RESPONSE_TO_CALL = "customerResponseToCall";
 	public final static String ALERT_COLUMN_ALERT_DATE = "alertDate";
 	public final static String ALERT_COLUMN_ALERT_ZONE_ID = "alertZoneId";
+	public final static String ALERT_COLUMN_CS_NUMBER = "csNumber";
 	
 	public final static String TEXT_TO_SPEECH_COLUMN_EVENT_ID = "customerResponseToCall";
 	public final static String TEXT_TO_SPEECH_COLUMN = "messageId";
@@ -100,12 +101,12 @@ public class Constants {
 	public final static String SQL_QUERY_UPSERT_ALERT = "IF NOT EXISTS (SELECT * FROM Alerts WHERE alarmIncidentNumber = ?) " +
 			" INSERT INTO Alerts (kId, createdAt, updatedAt, siteNumber, systemNumber, alarmIncidentNumber, dispatchLocation, alarmEventId, currentWriteEventCode,"
 			+ " fullClearStatus, isActiveAlert, alertHandlingStatusCode, alertHandlingStatusMessage, progressMessages, contacts, callGeneratedText, textToSpeechFileLocation,"
-			+ " vonageCurrentConversationId, answeredPhoneNumber, orderOfAnsweredCall, vonageConversationLength, customerResponseToCall, alertDate, alertZoneId) "
-			+ " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+			+ " vonageCurrentConversationId, answeredPhoneNumber, orderOfAnsweredCall, vonageConversationLength, customerResponseToCall, alertDate, alertZoneId, csNumber) "
+			+ " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 			+ " ELSE UPDATE Alerts SET kId=?, createdAt=?, updatedAt=?, siteNumber=?, systemNumber=?, alarmIncidentNumber=?, dispatchLocation=?, alarmEventId=?,"
 			+ " currentWriteEventCode=?, fullClearStatus=?, isActiveAlert=?, alertHandlingStatusCode=?, alertHandlingStatusMessage=?, progressMessages=?, contacts=?,"
 			+ " callGeneratedText=?, textToSpeechFileLocation=?, vonageCurrentConversationId=?, answeredPhoneNumber=?, orderOfAnsweredCall=?, vonageConversationLength=?,"
-			+ " customerResponseToCall=?, alertDate=?, alertZoneId=? WHERE alarmIncidentNumber=?";
+			+ " customerResponseToCall=?, alertDate=?, alertZoneId=?, csNumber=? WHERE alarmIncidentNumber=?";
 	
 	public final static String SQL_QUERY_INSERT_CONVERSATION_RECORD = "INSERT INTO Conversations (conversationId, uuid, fromNo, toNo, eventTimestamp, disconnectedBy, "
 			+ "duration, rate, price, startTime, endTime, rawEvent, kId, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";

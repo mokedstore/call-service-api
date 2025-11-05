@@ -5,8 +5,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.json.JSONObject;
 
+import com.kpmg.g1.api.business.AlertsOpenForTooLongThread;
 import com.kpmg.g1.api.utils.AzureTextToSpeechClient;
-import com.kpmg.g1.api.utils.JSONConfigurations;
+//import com.kpmg.g1.api.utils.JSONConfigurations;
 
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
@@ -31,6 +32,17 @@ public class CallServiceMainService {
 		return Response.status(200).entity(response.toString()).build();
 	}
 	
+	@Path("/manually/handle/alerts/open/for/too/long")
+	@GET
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response manuallyHandleAlertsOpenForTooLong() {
+		AlertsOpenForTooLongThread.handleOpenAlertsForTooLongManually();
+		JSONObject response = new JSONObject();
+		log.info("Received request to manually handle alerts open for too long");
+		response.put("message", "sent request to manually handle alerts open for too long");
+		return Response.status(200).entity(response.toString()).build();
+	}
+	
 	@Path("/text/to/speech")
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
@@ -48,11 +60,11 @@ public class CallServiceMainService {
 		}
         String ssml = requestBodyJson.getString("ssml");
         try {
-        	    JSONObject textToSpeechResponse = new JSONObject(JSONConfigurations.getInstance().getConfigurations().getJSONObject("mock").getJSONObject("textToSpeech").toString());
-//              JSONObject textToSpeechResponse = AzureTextToSpeechClient.convertTextToSpeech(ssml);
-//              if(textToSpeechResponse.has("error")) {
-//            	  return Response.status(500).entity(textToSpeechResponse.toString()).build();
-//              }
+        	    //JSONObject textToSpeechResponse = new JSONObject(JSONConfigurations.getInstance().getConfigurations().getJSONObject("mock").getJSONObject("textToSpeech").toString());
+              JSONObject textToSpeechResponse = AzureTextToSpeechClient.convertTextToSpeech(ssml);
+              if(textToSpeechResponse.has("error")) {
+            	  return Response.status(500).entity(textToSpeechResponse.toString()).build();
+              }
             return Response.status(200).entity(textToSpeechResponse.toString()).build();
 
         } catch (Exception e) {

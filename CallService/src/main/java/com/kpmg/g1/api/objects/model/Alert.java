@@ -32,6 +32,7 @@ public class Alert {
 	private String alertInitStatus;
 	private String inCaseOfDuplicateCurrentAlertId;
 	private String alertZoneId;
+	private String csNumber;
 	
 	
 	public Alert() {
@@ -62,6 +63,7 @@ public class Alert {
 		this.alertInitStatus = "";
 		this.inCaseOfDuplicateCurrentAlertId = "";
 		this.alertZoneId = "";
+		this.csNumber = "";
 	}
 	
 	public Alert(String kId, String createdAt, String updatedAt, String siteNumber, String systemNumber,
@@ -69,7 +71,7 @@ public class Alert {
 			String fullClearStatus, boolean isActiveAlert, String alertHandlingStatusCode,
 			String alertHandlingStatusMessage, String progressMessages, String contacts, String callGeneratedText,
 			String textToSpeechFileLocation, String vonageCurrentConversationId, String answeredPhoneNumber,
-			int orderOfAnsweredCall, int vonageConversationLength, String customerResponseToCall, String alertDate, String alertZoneId) {
+			int orderOfAnsweredCall, int vonageConversationLength, String customerResponseToCall, String alertDate, String alertZoneId, String csNumber) {
 		this.kId = kId;
 		this.createdAt = createdAt;
 		this.updatedAt = updatedAt;
@@ -97,6 +99,7 @@ public class Alert {
 		this.alertInitStatus = "";
 		this.inCaseOfDuplicateCurrentAlertId = "";
 		this.alertZoneId = alertZoneId;
+		this.csNumber = csNumber;
 	}
 
 	public String getkId() {
@@ -316,6 +319,14 @@ public class Alert {
 		this.alertZoneId = alertZoneId;
 	}
 
+	public String getCsNumber() {
+		return csNumber;
+	}
+
+	public void setCsNumber(String csNumber) {
+		this.csNumber = csNumber;
+	}
+
 	@Override
 	public String toString() {
 		return "Alert [kId=" + kId + ", createdAt=" + createdAt + ", updatedAt=" + updatedAt + ", siteNumber="
@@ -328,7 +339,10 @@ public class Alert {
 				+ ", textToSpeechFileLocation=" + textToSpeechFileLocation + ", vonageCurrentConversationId="
 				+ vonageCurrentConversationId + ", answeredPhoneNumber=" + answeredPhoneNumber
 				+ ", orderOfAnsweredCall=" + orderOfAnsweredCall + ", vonageConversationLength="
-				+ vonageConversationLength + ", customerResponseToCall=" + customerResponseToCall + ", alertDate=" + alertDate  + ", alertZoneId=" + alertZoneId + "]";
+				+ vonageConversationLength + ", customerResponseToCall=" + customerResponseToCall + ", alertDate="
+				+ alertDate + ", wasAlertAlreadyHandled=" + wasAlertAlreadyHandled + ", alertInitStatus="
+				+ alertInitStatus + ", inCaseOfDuplicateCurrentAlertId=" + inCaseOfDuplicateCurrentAlertId
+				+ ", alertZoneId=" + alertZoneId + ", csNumber=" + csNumber + "]";
 	}
 
 	public void addProgressMessage(String timestamp, String level, String message) {
@@ -347,7 +361,8 @@ public class Alert {
 			.put("alertHandlingStatusCode", this.alertHandlingStatusCode).put("alertHandlingStatusMessage", this.alertHandlingStatusMessage).put("progressMessages", this.progressMessages)
 			.put("contacts", this.contacts).put("callGeneratedText", this.callGeneratedText).put("textToSpeechFileLocation", this.textToSpeechFileLocation)
 			.put("vonageCurrentConversationId", this.vonageCurrentConversationId).put("answeredPhoneNumber", this.answeredPhoneNumber).put("orderOfAnsweredCall", this.orderOfAnsweredCall)
-			.put("vonageConversationLength", this.vonageConversationLength).put("customerResponseToCall", this.customerResponseToCall).put("alertDate", this.alertDate).put("alertZoneId", this.alertZoneId);
+			.put("vonageConversationLength", this.vonageConversationLength).put("customerResponseToCall", this.customerResponseToCall).put("alertDate", this.alertDate)
+			.put("alertZoneId", this.alertZoneId).put("csNumber", this.csNumber);
 		return json;
 	}
 	

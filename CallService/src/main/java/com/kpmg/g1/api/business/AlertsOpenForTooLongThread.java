@@ -28,9 +28,10 @@ public class AlertsOpenForTooLongThread extends Thread {
 				} catch(Exception e) {
 					log.error("Error occurred while trying to sleep in AlertsFetcherThread between alert calls. " + ExceptionUtils.getStackTrace(e));
 				}
+				log.info("Checking for alerts open for too long");
 				List<Alert> alertOpenForTooLong = CallServiceDAOImplementation.getAlertsOpenForTooLong();
 				if (alertOpenForTooLong == null || alertOpenForTooLong.size() == 0) {
-					return;
+					continue;
 				}
 				for (Alert openAlert : alertOpenForTooLong) {
 					openAlert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_INFO, "Alert is open for too long without update. declaring it as closed.");
@@ -42,13 +43,33 @@ public class AlertsOpenForTooLongThread extends Thread {
 					openAlert.setFullClearStatus(Constants.FULL_CLEAR_FLAG_YES);
 					// update that alert handling failed
 					Utils.updateEvent(openAlert.getSystemNumber(), openAlert.getAlarmIncidentNumber(), openAlert.getCurrentWriteEventCode(),
-							openAlert.getFullClearStatus(), Constants.FAILED_ALERT_COMMENT);
+							openAlert.getFullClearStatus(), Constants.FAILED_ALERT_COMMENT, Constants.FULL_CLEAR_FLAG_YES);
 					CallServiceDAOImplementation.upsertAlert(openAlert);
 				}
 			}
 			log.info("AlertsOpenForTooLongThread was gracefully terminated");
 		} else {
 			log.info("Found that this instance is not master for alerts open for too long handling");
+		}
+	}
+	
+	public static void handleOpenAlertsForTooLongManually() {
+		List<Alert> alertOpenForTooLong = CallServiceDAOImplementation.getAlertsOpenForTooLong();
+		if (alertOpenForTooLong == null || alertOpenForTooLong.size() == 0) {
+			return;
+		}
+		for (Alert openAlert : alertOpenForTooLong) {
+			openAlert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_INFO, "Alert is open for too long without update. declaring it as closed.");
+			openAlert.setActiveAlert(false);
+			openAlert.setAlertHandlingStatusCode(Constants.OPEN_FOR_TOO_LONG);
+			openAlert.setAlertHandlingStatusMessage("open for too long");
+			openAlert.setUpdatedAt(Utils.getTimestampFromDate(null));
+			openAlert.setCurrentWriteEventCode(Constants.FAILED_ALERT_CODE_EVENT);
+			openAlert.setFullClearStatus(Constants.FULL_CLEAR_FLAG_YES);
+			// update that alert handling failed
+			Utils.updateEvent(openAlert.getSystemNumber(), openAlert.getAlarmIncidentNumber(), openAlert.getCurrentWriteEventCode(),
+					openAlert.getFullClearStatus(), Constants.FAILED_ALERT_COMMENT, Constants.FULL_CLEAR_FLAG_YES);
+			CallServiceDAOImplementation.upsertAlert(openAlert);
 		}
 	}
 	

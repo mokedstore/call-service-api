@@ -22,7 +22,7 @@ public class MockService {
 	
 	final static Logger log = LogManager.getLogger(MockService.class.getName());
 
-	@Path("/api/alerts")
+	@Path("/api/alarms")
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     public Response getAlerts() {
