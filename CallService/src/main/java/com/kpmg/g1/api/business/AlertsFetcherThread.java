@@ -65,9 +65,22 @@ public class AlertsFetcherThread extends Thread {
 		}
 	}
 	
+	public static boolean getGetAlertsLoop() {
+		return getAlertsLoop;
+	}
+	
 	public static void changeGetAlertLoop(boolean getAlertsLoopValue) {
 		getAlertsLoop = getAlertsLoopValue;
 	}
+	
+	public static boolean getIsAlertLoopMaster() {
+		return isAlertLoopMaster;
+	}
+	
+	public static void setIsAlertLoopMaster(boolean isAlertLoopMasterValue) {
+		isAlertLoopMaster = isAlertLoopMasterValue;
+	}
+	
 	
 	private static void handleNewOpenAlerts(JSONArray openAlerts) {
 		// get unique values of site numbers to check if any new alert is not relevant since there is already open alert in database

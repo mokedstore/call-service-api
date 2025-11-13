@@ -148,7 +148,7 @@ public class Utils {
 	public static Conversation buildConversationObjectFromVonageEvent(JSONObject vonageEventObject) {
 		try {
 			String conversationId = vonageEventObject.optString("conversation_uuid", "");
-			String uuid = vonageEventObject.optString("uuid", vonageEventObject.optString("call_uuid", ""));
+			String uuid = vonageEventObject.optString("uuid", vonageEventObject.optString("call_uuid", vonageEventObject.optString("callId", "")));
 			// in case uuid is empty try to get it via conversation id
 			if ((uuid.isEmpty()) && (!conversationId.isEmpty()))  {
 				uuid = CallServiceDAOImplementation.getVonageUuidByConversationId(conversationId);
@@ -232,7 +232,7 @@ public class Utils {
 			.put("full_clear_flag", alarmFullClearFlag).put("emp_no", JSONConfigurations.getInstance().getConfigurations().getInt("g1EventsApiEmpNo"))
 			.put("user_name", JSONConfigurations.getInstance().getConfigurations().getString("g1EventsApiUserName")).put("additional_info", "")
 			.put("test_seqno", 0).put("phone", "").put("scheduled_date", Utils.getTimestampFromDate(null)).put("alarminc_call_seqno", 0).put("aux2", "")
-			.put("fc_all_systems", Constants.FULL_CLEAR_FLAG_NO);
+			.put("fc_all_systems", fcAllSystems);
 		} catch (Exception e) {
 			log.error("Received Exception while trying to build events api request with values: systemNumber - " + systemNumber + " alarmIncidentNumber: " + alarmIncidentNumber +
 					" alarmEventId: " + alarmEventId + " comment: " + comment + " alarmFullClearFlag: " + alarmFullClearFlag + " .Error: " + ExceptionUtils.getStackTrace(e));

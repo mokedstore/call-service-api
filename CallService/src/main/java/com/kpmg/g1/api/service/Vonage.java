@@ -154,9 +154,7 @@ public class Vonage {
 	@Produces(MediaType.APPLICATION_JSON)
 	@Consumes(MediaType.APPLICATION_JSON)
 	public Response answer(String requestBody) {
-		System.out.println("I was Answered");
 		JSONObject requestBodyObj = new JSONObject(requestBody);
-		System.out.println(requestBodyObj.toString(2));
 		Conversation conversationObject = Utils.buildConversationObjectFromVonageEvent(requestBodyObj);
 		if (conversationObject == null) {
 			log.error("Falied to build conversation object in /vonage/answer with body " + requestBody + " event will be ignored");
@@ -167,8 +165,9 @@ public class Vonage {
 		  // continue business use case based on event status (only relevant events are timeout/hangup or answered)
 		  if (requestBodyObj.optString("status", "").equals("timeout") || requestBodyObj.optString("status", "").equals("unanswered") ||
 				  (requestBodyObj.optString("status", "").equals("completed") && requestBodyObj.optString("detail", "").equals("remote_busy"))
-				  || (requestBodyObj.optString("status", "").equals("busy") && requestBodyObj.optString("detail", "").equals("remote_busy"))){
-			  UnansweredConversationThread unansweredConversationThread = new UnansweredConversationThread(requestBodyObj.getString("uuid"));
+				  || (requestBodyObj.optString("status", "").equals("busy") && requestBodyObj.optString("detail", "").equals("remote_busy"))
+				  || (requestBodyObj.optString("status", "").equals("cancelled") && requestBodyObj.optString("detail", "").equals("ring_timeout"))) {
+			  UnansweredConversationThread unansweredConversationThread = new UnansweredConversationThread(conversationObject.getUuid());
 			  unansweredConversationThread.start();
 		  } else if (requestBodyObj.optString("status", "").equals("completed") && requestBodyObj.optString("detail", "").equals("ok")) {
 			  // in case of a completed call that was unanswered or timeout it will be handled by the above if clause. Treat only answered calls
@@ -195,9 +194,7 @@ public class Vonage {
 	public Response eventApi(String requestBody) {
 		JSONArray ncco = new JSONArray();
 		try {
-			System.out.println("in event");
 			JSONObject requestBodyObj = new JSONObject(requestBody);
-			System.out.println(requestBodyObj.toString(2));
 			Conversation conversationObject = Utils.buildConversationObjectFromVonageEvent(requestBodyObj);
 			if (conversationObject == null) {
 				log.error("In Vonage Event: received request body which could not be converted to conversation object. Will not proceed with call! data: " + requestBodyObj.toString());

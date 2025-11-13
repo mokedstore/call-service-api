@@ -5,6 +5,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.json.JSONObject;
 
+import com.kpmg.g1.api.business.AlertsFetcherThread;
 import com.kpmg.g1.api.business.AlertsOpenForTooLongThread;
 import com.kpmg.g1.api.utils.AzureTextToSpeechClient;
 //import com.kpmg.g1.api.utils.JSONConfigurations;
@@ -41,6 +42,43 @@ public class CallServiceMainService {
 		log.info("Received request to manually handle alerts open for too long");
 		response.put("message", "sent request to manually handle alerts open for too long");
 		return Response.status(200).entity(response.toString()).build();
+	}
+	
+	@Path("/stop/alert/fetching")
+	@POST
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response stopAlertFetching() {
+		JSONObject response = new JSONObject();
+		log.info("Received request to manually stop alerts fetching");
+		if (AlertsFetcherThread.getGetAlertsLoop()) {
+			AlertsFetcherThread.setIsAlertLoopMaster(false);
+			AlertsFetcherThread.changeGetAlertLoop(false);
+			response.put("message", "stopped alerts fetching");
+			return Response.status(200).entity(response.toString()).build();
+		} else {
+			response.put("message", "alerts fetching is already stopped");
+			return Response.status(200).entity(response.toString()).build();
+		}
+	}
+	
+	@Path("/start/alert/fetching")
+	@POST
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response startAlertFetching() {
+		JSONObject response = new JSONObject();
+		log.info("Received request to manually start alerts fetching");
+		if (!AlertsFetcherThread.getGetAlertsLoop()) {
+			AlertsFetcherThread.setIsAlertLoopMaster(true);
+			AlertsFetcherThread.changeGetAlertLoop(true);
+			AlertsFetcherThread alertsFetcherThread = new AlertsFetcherThread();
+			alertsFetcherThread.setName("alertsFetcher-Thread");
+			alertsFetcherThread.start();
+			response.put("message", "started alerts fetching");
+			return Response.status(200).entity(response.toString()).build();
+		} else {
+			response.put("message", "alerts fetching is already running");
+			return Response.status(200).entity(response.toString()).build();
+		}
 	}
 	
 	@Path("/text/to/speech")
