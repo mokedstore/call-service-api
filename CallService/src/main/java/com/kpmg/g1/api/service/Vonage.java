@@ -166,7 +166,8 @@ public class Vonage {
 		  if (requestBodyObj.optString("status", "").equals("timeout") || requestBodyObj.optString("status", "").equals("unanswered") ||
 				  (requestBodyObj.optString("status", "").equals("completed") && requestBodyObj.optString("detail", "").equals("remote_busy"))
 				  || (requestBodyObj.optString("status", "").equals("busy") && requestBodyObj.optString("detail", "").equals("remote_busy"))
-				  || (requestBodyObj.optString("status", "").equals("cancelled") && requestBodyObj.optString("detail", "").equals("ring_timeout"))) {
+				  || (requestBodyObj.optString("status", "").equals("cancelled") && requestBodyObj.optString("detail", "").equals("ring_timeout"))
+				  || (requestBodyObj.optString("status", "").equals("rejected") && requestBodyObj.optString("detail", "").equals("restricted"))) {
 			  UnansweredConversationThread unansweredConversationThread = new UnansweredConversationThread(conversationObject.getUuid());
 			  unansweredConversationThread.start();
 		  } else if (requestBodyObj.optString("status", "").equals("completed") && requestBodyObj.optString("detail", "").equals("ok")) {

@@ -142,7 +142,7 @@ public class UnansweredConversationThread extends Thread {
 		
 		// start call with the next contact
 		String phoneNumber = nextContact.getString("phone");
-		JSONObject startVonageCallResponse = Utils.vonageStartCall(contacts.getJSONObject(0).getString("phone"), alert.getTextToSpeechFileLocation());
+		JSONObject startVonageCallResponse = Utils.vonageStartCall(phoneNumber, alert.getTextToSpeechFileLocation());
 		if (startVonageCallResponse == null) {
 			alert.setAlertHandlingStatusCode(Constants.FAILED_TO_START_VONAGE_CALL_STATUS_CODE);
 			alert.setAlertHandlingStatusMessage("Failed to create vonage call");
