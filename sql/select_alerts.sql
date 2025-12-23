@@ -72,7 +72,7 @@ SELECT TOP (1000) [kId]
 -- );
 
 ALTER TABLE Generic.dbo.Alerts
-ADD alertZoneId NVARCHAR(10);
+ADD csNumber NVARCHAR(40);
 
 ALTER TABLE Generic.dbo.Alerts
 DROP COLUMN alert_zone_id;
@@ -97,3 +97,34 @@ SELECT DISTINCT dispatchLocation FROM Generic.dbo.Alerts WHERE vonageCurrentConv
 UPDATE Generic.dbo.DispatchIdToPhoneNumber SET dispatchPhoneNumber='972544888673' WHERE dispatchLocation='101'
 
 UPDATE Generic.dbo.Alerts SET isActiveAlert=1 WHERE alarmIncidentNumber='1402229120'
+
+
+INSERT INTO Generic.dbo.TextToSpeechMessages VALUES('CIE755', 'CAMSIG');
+INSERT INTO Generic.dbo.TextToSpeechMessages VALUES('755', 'CAMSIG');
+INSERT INTO Generic.dbo.TextToSpeechMessages VALUES('CIE360', '9.הקלט')
+INSERT INTO Generic.dbo.TextToSpeechMessages VALUES('CIE609', '9.הקלט');
+
+INSERT INTO Generic.dbo.TextToSpeechMessages VALUES('CIE350', '2.חשמל');
+INSERT INTO Generic.dbo.TextToSpeechMessages VALUES('350', '2.חשמל');
+
+INSERT INTO Generic.dbo.TextToSpeechMessages VALUES('CIE301', '2.חשמל');
+INSERT INTO Generic.dbo.TextToSpeechMessages VALUES('301', 'תק-תק');
+
+INSERT INTO Generic.dbo.TextToSpeechMessages VALUES('902', '5.דריכה');
+INSERT INTO Generic.dbo.TextToSpeechMessages VALUES('902S', '5.דריכה');
+INSERT INTO Generic.dbo.TextToSpeechMessages VALUES('9020S', '5.דריכה');
+
+INSERT INTO Generic.dbo.TextToSpeechMessages VALUES('399', '1.פתיח');
+INSERT INTO Generic.dbo.TextToSpeechMessages VALUES('3999', '1.פתיח');
+INSERT INTO Generic.dbo.TextToSpeechMessages VALUES('399S', '1.פתיח');
+INSERT INTO Generic.dbo.TextToSpeechMessages VALUES('3999S', '1.פתיח');
+
+INSERT INTO Generic.dbo.TextToSpeechMessages VALUES('CIE400', '1.פתיח');
+INSERT INTO Generic.dbo.TextToSpeechMessages VALUES('CIE401', '1.פתיח');
+INSERT INTO Generic.dbo.TextToSpeechMessages VALUES('CIE403', '1.פתיח');
+INSERT INTO Generic.dbo.TextToSpeechMessages VALUES('CIE404', '1.פתיח');
+INSERT INTO Generic.dbo.TextToSpeechMessages VALUES('CIE405', '1.פתיח');
+INSERT INTO Generic.dbo.TextToSpeechMessages VALUES('CIE406', '1.פתיח');
+INSERT INTO Generic.dbo.TextToSpeechMessages VALUES('CIE407', '1.פתיח');
+INSERT INTO Generic.dbo.TextToSpeechMessages VALUES('CIE408', '1.פתיח');
+INSERT INTO Generic.dbo.TextToSpeechMessages VALUES('CIE409', '1.פתיח');
