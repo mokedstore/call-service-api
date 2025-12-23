@@ -163,8 +163,7 @@ public class Vonage {
 		} else {
 		  CallServiceDAOImplementation.insertConversation(conversationObject);
 		  // continue business use case based on event status (only relevant events are timeout/hangup or answered)
-		  if (requestBodyObj.optString("status", "").equals("timeout") || requestBodyObj.optString("status", "").equals("unanswered") ||
-				  (requestBodyObj.optString("status", "").equals("completed") && requestBodyObj.optString("detail", "").equals("remote_busy"))
+		  if (requestBodyObj.optString("status", "").equals("timeout") || requestBodyObj.optString("status", "").equals("unanswered")
 				  || (requestBodyObj.optString("status", "").equals("busy") && requestBodyObj.optString("detail", "").equals("remote_busy"))
 				  || (requestBodyObj.optString("status", "").equals("cancelled") && requestBodyObj.optString("detail", "").equals("ring_timeout"))
 				  || (requestBodyObj.optString("status", "").equals("rejected") && requestBodyObj.optString("detail", "").equals("restricted"))) {
@@ -181,6 +180,29 @@ public class Vonage {
 			  } else {
 				  UnansweredConversationThread unansweredConversationThread = new UnansweredConversationThread(conversationObject.getUuid());
 				  unansweredConversationThread.start();
+			  }
+		  } else if (requestBodyObj.optString("status", "").equals("completed") && requestBodyObj.optString("detail", "").equals("remote_busy")) {
+			  // in this case check if conversation already have busy status which indicates event is handled by other event if not start unanswered scenario
+			  boolean wasBusyStatusDetected = CallServiceDAOImplementation.checkIfConversationHasBusyStatus(conversationObject.getUuid(), conversationObject.getConversationId());
+			  if (!wasBusyStatusDetected) {
+				  // check again after 2.5 seconds and if not received event start a new call
+				  try {
+					  Thread.sleep(2500);
+				  } catch (Exception ex) {}
+				  wasBusyStatusDetected = CallServiceDAOImplementation.checkIfConversationHasBusyStatus(conversationObject.getUuid(), conversationObject.getConversationId());
+				  if (!wasBusyStatusDetected) {
+					  UnansweredConversationThread unansweredConversationThread = new UnansweredConversationThread(conversationObject.getUuid());
+					  unansweredConversationThread.start();  
+				  }
+			  }
+		  } else {
+			  if (requestBodyObj.has("detail") && !(requestBodyObj.optString("status", "").equals("timeout") || requestBodyObj.optString("status", "").equals("unanswered"))) {
+				  boolean avoidLogging = requestBodyObj.optString("status", "").equals("completed") && 
+						  ( requestBodyObj.getString("detail").equals("ring_timeout") || requestBodyObj.getString("detail").equals("unavailable") 
+								  || requestBodyObj.getString("detail").equals("restricted"));
+				  if (!avoidLogging) {
+					  log.info("In Vonage Answer. Received unexpected answer: " + requestBodyObj.toString());
+				  }
 			  }
 		  }
 		}
@@ -332,7 +354,7 @@ public class Vonage {
 					}
 				}
 			} else {
-				log.error("In Vonage Event. Received unexpected event: " + requestBodyObj.toString());
+				log.info("In Vonage Event. Received unexpected event: " + requestBodyObj.toString());
 				ncco.put(new JSONObject());
 			}
 			CallServiceDAOImplementation.insertConversation(conversationObject);

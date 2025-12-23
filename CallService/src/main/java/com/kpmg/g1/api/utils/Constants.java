@@ -114,6 +114,8 @@ public class Constants {
 	public final static String SQL_QUERY_GET_UUID_FROM_CONVERSATION_ID = "SELECT DISTINCT uuid FROM Conversations WHERE conversationId=?";
 	public final static String SQL_QUERY_GET_STATUS_OF_ANSWERED_CALLS_BY_IDS = "SELECT status FROM Conversations WHERE (uuid = ? OR conversationId = ?)"
 			+ " AND (status = 'dtmf:1' or status = 'dtmf:2')";
+	public final static String SQL_QUERY_CHECK_IF_CONVERSATION_HAS_BUSY_STATUS = "SELECT status FROM Conversations WHERE (uuid = ? OR conversationId = ?)"
+			+ " AND (status = 'busy')";
 	public final static String SQL_QUERY_CHECK_NUMBER_OF_ANSWERS = "SELECT COUNT(*) AS count FROM Conversations WHERE (uuid = ? OR conversationId = ?)" +
 			" AND status LIKE 'dtmf%'";
 	

@@ -65,7 +65,7 @@ public class Utils {
 	
 	public static String getUtcTimeFromIdtTime(String idtTimeAsString) {
 		try {
-			DateTimeFormatter formatter = DateTimeFormatter.ofPattern(Constants.G1_TIMESTAMP_PATTERN_IDT);
+			 DateTimeFormatter formatter = DateTimeFormatter.ofPattern(Constants.G1_TIMESTAMP_PATTERN_IDT);
 			 LocalDateTime localDateTime = LocalDateTime.parse(idtTimeAsString, formatter);
 			 ZonedDateTime jerusalemTime = localDateTime.atZone(ZoneId.of("Asia/Jerusalem"));
 			// Convert to UTC instant

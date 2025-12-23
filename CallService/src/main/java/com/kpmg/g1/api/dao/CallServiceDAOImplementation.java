@@ -6,6 +6,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.sql.Types;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -331,6 +332,38 @@ public class CallServiceDAOImplementation {
 		}
 	}
 	
+	public static boolean checkIfConversationHasBusyStatus(String uuid, String conversationId) {
+		// both uuid and conversation id can be used for conversation data retrieval. In case one of them is empty set to value that will not match (empty matches everything)
+		if (uuid.isEmpty()) {
+			uuid = "1";
+		}
+		if (conversationId.isEmpty()) {
+			conversationId = "1";
+		}
+		Connection connection = null;
+		PreparedStatement ps = null;
+		ResultSet res = null;
+		try {
+			connection = basicDS.getConnection();
+			ps = connection.prepareStatement(Constants.SQL_QUERY_CHECK_IF_CONVERSATION_HAS_BUSY_STATUS);
+			ps.setString(1, uuid);
+			ps.setString(2, conversationId);
+			res = ps.executeQuery();
+
+			if (!res.isBeforeFirst()) {
+				return false;
+			}
+			return true;
+
+		} catch (SQLException e) {
+			log.error("Error while trying to get completed conversation status from vonage UUID " + uuid + " and vonage conversation id " + conversationId
+					+" Error: " + ExceptionUtils.getStackTrace(e));
+			return false;
+		} finally {
+			closeResources(connection, ps, res);
+		}
+	}
+	
 	public static JSONObject getAlarmCodeAndDispatchLocationByUuid(String uuid) {
 		if (uuid == null || uuid.isEmpty()) {
 			return null;
@@ -420,75 +453,95 @@ public class CallServiceDAOImplementation {
 	public static String upsertAlert(Alert alert) {
 		Connection connection = null;
 		PreparedStatement ps = null;
-		try {
-			connection = basicDS.getConnection();
-			ps = connection.prepareStatement(Constants.SQL_QUERY_UPSERT_ALERT);
-			alert.setUpdatedAt(Utils.getTimestampFromDate(null));
-			Timestamp createdAtTs = new Timestamp(Utils.getDateFromString(alert.getCreatedAt(), Constants.TIMESTAMP_PATTERN).getTime());
-			Timestamp updatedAtTs = new Timestamp(Utils.getDateFromString(alert.getUpdatedAt(), Constants.TIMESTAMP_PATTERN).getTime());
-			Timestamp alertDate = new Timestamp(Utils.getDateFromString(alert.getAlertDate(), Constants.TIMESTAMP_PATTERN).getTime());
-			ps.setString(1, alert.getAlarmIncidentNumber());
-			ps.setString(2, alert.getkId());
-			ps.setTimestamp(3, createdAtTs);
-			ps.setTimestamp(4, updatedAtTs);
-			ps.setString(5, alert.getSiteNumber());
-			ps.setString(6, alert.getSystemNumber());
-			ps.setString(7, alert.getAlarmIncidentNumber());
-			ps.setString(8, alert.getDispatchLocation());
-			ps.setString(9, alert.getAlarmEventId());
-			ps.setString(10, alert.getCurrentWriteEventCode());
-			ps.setString(11, alert.getFullClearStatus());
-			ps.setBoolean(12, alert.isActiveAlert());
-			ps.setString(13, alert.getAlertHandlingStatusCode());
-			ps.setString(14, alert.getAlertHandlingStatusMessage());
-			ps.setString(15, alert.getProgressMessages());
-			ps.setString(16, alert.getContacts());
-			ps.setString(17, alert.getCallGeneratedText());
-			ps.setString(18, alert.getTextToSpeechFileLocation());
-			ps.setString(19, alert.getVonageCurrentConversationId());
-			ps.setString(20, alert.getAnsweredPhoneNumber());
-			ps.setInt(21, alert.getOrderOfAnsweredCall());
-			ps.setInt(22, alert.getVonageConversationLength());
-			ps.setString(23, alert.getCustomerResponseToCall());
-			ps.setTimestamp(24, alertDate);
-			ps.setString(25, alert.getAlertZoneId());
-			ps.setString(26, alert.getCsNumber());
-			ps.setString(27, alert.getkId());
-			ps.setTimestamp(28, createdAtTs);
-			ps.setTimestamp(29, updatedAtTs);
-			ps.setString(30, alert.getSiteNumber());
-			ps.setString(31, alert.getSystemNumber());
-			ps.setString(32, alert.getAlarmIncidentNumber());
-			ps.setString(33, alert.getDispatchLocation());
-			ps.setString(34, alert.getAlarmEventId());
-			ps.setString(35, alert.getCurrentWriteEventCode());
-			ps.setString(36, alert.getFullClearStatus());
-			ps.setBoolean(37, alert.isActiveAlert());
-			ps.setString(38, alert.getAlertHandlingStatusCode());
-			ps.setString(39, alert.getAlertHandlingStatusMessage());
-			ps.setString(40, alert.getProgressMessages());
-			ps.setString(41, alert.getContacts());
-			ps.setString(42, alert.getCallGeneratedText());
-			ps.setString(43, alert.getTextToSpeechFileLocation());
-			ps.setString(44, alert.getVonageCurrentConversationId());
-			ps.setString(45, alert.getAnsweredPhoneNumber());
-			ps.setInt(46, alert.getOrderOfAnsweredCall());
-			ps.setInt(47, alert.getVonageConversationLength());
-			ps.setString(48, alert.getCustomerResponseToCall());
-			ps.setTimestamp(49, alertDate);
-			ps.setString(50, alert.getAlertZoneId());
-			ps.setString(51, alert.getCsNumber());
-			ps.setString(52, alert.getAlarmIncidentNumber());
-			
-			ps.executeUpdate();
-			return "success";
-		} catch (Exception e) {
-			log.error("Error occurred while trying to upsert Alert event of alarm incident number: " + alert.getAlarmIncidentNumber()
-				+ " Alert: " + alert.toString() + " Error: " + ExceptionUtils.getStackTrace(e));
-			return null;
-		} finally {
-			closeResources(connection, ps, null);
+		final int MAX_NUMBER_OF_ATTEMPTS = 5;
+		int currentAttempt = 0;
+		while (currentAttempt < MAX_NUMBER_OF_ATTEMPTS) {
+			currentAttempt++;
+			try {
+				connection = basicDS.getConnection();
+				ps = connection.prepareStatement(Constants.SQL_QUERY_UPSERT_ALERT);
+				alert.setUpdatedAt(Utils.getTimestampFromDate(null));
+				Timestamp createdAtTs = new Timestamp(Utils.getDateFromString(alert.getCreatedAt(), Constants.TIMESTAMP_PATTERN).getTime());
+				Timestamp updatedAtTs = new Timestamp(Utils.getDateFromString(alert.getUpdatedAt(), Constants.TIMESTAMP_PATTERN).getTime());
+				Timestamp alertDate = null;
+				if (alert.getAlertDate() != null) {
+					alertDate = new Timestamp(Utils.getDateFromString(alert.getAlertDate(), Constants.TIMESTAMP_PATTERN).getTime());
+				}
+				ps.setString(1, alert.getAlarmIncidentNumber());
+				ps.setString(2, alert.getkId());
+				ps.setTimestamp(3, createdAtTs);
+				ps.setTimestamp(4, updatedAtTs);
+				ps.setString(5, alert.getSiteNumber());
+				ps.setString(6, alert.getSystemNumber());
+				ps.setString(7, alert.getAlarmIncidentNumber());
+				ps.setString(8, alert.getDispatchLocation());
+				ps.setString(9, alert.getAlarmEventId());
+				ps.setString(10, alert.getCurrentWriteEventCode());
+				ps.setString(11, alert.getFullClearStatus());
+				ps.setBoolean(12, alert.isActiveAlert());
+				ps.setString(13, alert.getAlertHandlingStatusCode());
+				ps.setString(14, alert.getAlertHandlingStatusMessage());
+				ps.setString(15, alert.getProgressMessages());
+				ps.setString(16, alert.getContacts());
+				ps.setString(17, alert.getCallGeneratedText());
+				ps.setString(18, alert.getTextToSpeechFileLocation());
+				ps.setString(19, alert.getVonageCurrentConversationId());
+				ps.setString(20, alert.getAnsweredPhoneNumber());
+				ps.setInt(21, alert.getOrderOfAnsweredCall());
+				ps.setInt(22, alert.getVonageConversationLength());
+				ps.setString(23, alert.getCustomerResponseToCall());
+				if (alertDate == null) {
+					ps.setNull(24, Types.TIMESTAMP);
+				} else {
+					ps.setTimestamp(24, alertDate);
+				}
+				ps.setString(25, alert.getAlertZoneId());
+				ps.setString(26, alert.getCsNumber());
+				ps.setString(27, alert.getkId());
+				ps.setTimestamp(28, createdAtTs);
+				ps.setTimestamp(29, updatedAtTs);
+				ps.setString(30, alert.getSiteNumber());
+				ps.setString(31, alert.getSystemNumber());
+				ps.setString(32, alert.getAlarmIncidentNumber());
+				ps.setString(33, alert.getDispatchLocation());
+				ps.setString(34, alert.getAlarmEventId());
+				ps.setString(35, alert.getCurrentWriteEventCode());
+				ps.setString(36, alert.getFullClearStatus());
+				ps.setBoolean(37, alert.isActiveAlert());
+				ps.setString(38, alert.getAlertHandlingStatusCode());
+				ps.setString(39, alert.getAlertHandlingStatusMessage());
+				ps.setString(40, alert.getProgressMessages());
+				ps.setString(41, alert.getContacts());
+				ps.setString(42, alert.getCallGeneratedText());
+				ps.setString(43, alert.getTextToSpeechFileLocation());
+				ps.setString(44, alert.getVonageCurrentConversationId());
+				ps.setString(45, alert.getAnsweredPhoneNumber());
+				ps.setInt(46, alert.getOrderOfAnsweredCall());
+				ps.setInt(47, alert.getVonageConversationLength());
+				ps.setString(48, alert.getCustomerResponseToCall());
+				if (alertDate == null) {
+					ps.setNull(49, Types.TIMESTAMP);
+				} else {
+					ps.setTimestamp(49, alertDate);
+				}
+				ps.setString(50, alert.getAlertZoneId());
+				ps.setString(51, alert.getCsNumber());
+				ps.setString(52, alert.getAlarmIncidentNumber());
+				
+				ps.executeUpdate();
+				return "success";
+			} catch (Exception e) {
+				log.error("Error occurred while trying to upsert Alert event of alarm incident number: " + alert.getAlarmIncidentNumber()
+					+ " Alert: " + alert.toString() + " Attempt: " + currentAttempt + " Error: " + ExceptionUtils.getStackTrace(e));
+				try {
+					Thread.sleep(1000);
+				} catch (Exception ex) {}
+			} finally {
+				closeResources(connection, ps, null);
+			}
 		}
+		return null;
+		
 	}
 	
 	public static String insertConversation(Conversation conversation) {

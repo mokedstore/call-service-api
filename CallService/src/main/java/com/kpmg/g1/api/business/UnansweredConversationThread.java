@@ -39,8 +39,16 @@ public class UnansweredConversationThread extends Thread {
 		// fetch Alert object from DB by vonage uuid
 		Alert alert = CallServiceDAOImplementation.getAlertByVonageUuid(this.vonageUuid);
 		if (alert == null) {
-			log.warn("Received vonage UUID: " + this.vonageUuid + " which does not have a matching Alert object in Alerts table! check ASAP");
-			return;
+			// may be due to multiple transactions to db. try to sleep and check again
+			try {
+				Thread.sleep(5000);
+			} catch (Exception e) {}
+			log.info("check again for uuid: " + this.vonageUuid);
+			alert = CallServiceDAOImplementation.getAlertByVonageUuid(this.vonageUuid);
+			if (alert == null) {
+				log.warn("Received vonage UUID: " + this.vonageUuid + " which does not have a matching Alert object in Alerts table! check ASAP");
+				return;
+			}
 		}
 		// check if all numbers in contacts were tried without success or should try to call the next number
 		try {
