@@ -44,7 +44,7 @@ public class AlertsOpenForTooLongThread extends Thread {
 					// update that alert handling failed
 					Utils.updateEvent(openAlert.getSystemNumber(), openAlert.getAlarmIncidentNumber(), openAlert.getCurrentWriteEventCode(),
 							openAlert.getFullClearStatus(), Constants.FAILED_ALERT_COMMENT, Constants.FULL_CLEAR_FLAG_YES);
-					CallServiceDAOImplementation.upsertAlert(openAlert);
+					CallServiceDAOImplementation.updateAlert(openAlert);
 				}
 			}
 			log.info("AlertsOpenForTooLongThread was gracefully terminated");
@@ -69,7 +69,7 @@ public class AlertsOpenForTooLongThread extends Thread {
 			// update that alert handling failed
 			Utils.updateEvent(openAlert.getSystemNumber(), openAlert.getAlarmIncidentNumber(), openAlert.getCurrentWriteEventCode(),
 					openAlert.getFullClearStatus(), Constants.FAILED_ALERT_COMMENT, Constants.FULL_CLEAR_FLAG_YES);
-			CallServiceDAOImplementation.upsertAlert(openAlert);
+			CallServiceDAOImplementation.updateAlert(openAlert);
 		}
 	}
 	

@@ -14,6 +14,7 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.apache.commons.lang3.exception.ExceptionUtils;
@@ -272,6 +273,31 @@ public class CallServiceDAOImplementation {
 		}
 	}
 	
+	public static String getkIdByConversationIdOrUUID(String uuid, String conversationId) {
+		Connection connection = null;
+		PreparedStatement ps = null;
+		ResultSet res = null;
+		try {
+			connection = basicDS.getConnection();
+			ps = connection.prepareStatement(Constants.SQL_QUERY_GET_KID_BY_CONVERSATION_ID_OR_UUID);
+			ps.setString(1, uuid);
+			ps.setString(2, conversationId);
+			res = ps.executeQuery();
+
+			if (!res.isBeforeFirst()) {
+				return null;
+			}
+			res.next();
+			return res.getString(Constants.ALERT_COLUMN_KID);
+
+		} catch (SQLException e) {
+			log.error("getkIdByConversationIdOrUUID: Error while trying to get kid by uuid  " + uuid + " and conversatons id: " + conversationId + " Error: " + ExceptionUtils.getStackTrace(e));
+			return null;
+		} finally {
+			closeResources(connection, ps, res);
+		}
+	}
+	
 	public static String getSpeechFileLocationByVonageUUID(String uuid) {
 		if (uuid.isEmpty()) {
 			return null;
@@ -450,6 +476,132 @@ public class CallServiceDAOImplementation {
 		}
 	}
 	
+	public static String insertAlert(Alert alert) {
+		Connection connection = null;
+		PreparedStatement ps = null;
+		final int MAX_NUMBER_OF_ATTEMPTS = 5;
+		int currentAttempt = 0;
+		while (currentAttempt < MAX_NUMBER_OF_ATTEMPTS) {
+			currentAttempt++;
+			try {
+				connection = basicDS.getConnection();
+				ps = connection.prepareStatement(Constants.SQL_QUERY_INSERT_ALERT);
+				alert.setUpdatedAt(Utils.getTimestampFromDate(null));
+				Timestamp createdAtTs = new Timestamp(Utils.getDateFromString(alert.getCreatedAt(), Constants.TIMESTAMP_PATTERN).getTime());
+				Timestamp updatedAtTs = new Timestamp(Utils.getDateFromString(alert.getUpdatedAt(), Constants.TIMESTAMP_PATTERN).getTime());
+				Timestamp alertDate = null;
+				if (alert.getAlertDate() != null) {
+					alertDate = new Timestamp(Utils.getDateFromString(alert.getAlertDate(), Constants.TIMESTAMP_PATTERN).getTime());
+				}
+				ps.setString(1, alert.getkId());
+				ps.setTimestamp(2, createdAtTs);
+				ps.setTimestamp(3, updatedAtTs);
+				ps.setString(4, alert.getSiteNumber());
+				ps.setString(5, alert.getSystemNumber());
+				ps.setString(6, alert.getAlarmIncidentNumber());
+				ps.setString(7, alert.getDispatchLocation());
+				ps.setString(8, alert.getAlarmEventId());
+				ps.setString(9, alert.getCurrentWriteEventCode());
+				ps.setString(10, alert.getFullClearStatus());
+				ps.setBoolean(11, alert.isActiveAlert());
+				ps.setString(12, alert.getAlertHandlingStatusCode());
+				ps.setString(13, alert.getAlertHandlingStatusMessage());
+				ps.setString(14, alert.getProgressMessages());
+				ps.setString(15, alert.getContacts());
+				ps.setString(16, alert.getCallGeneratedText());
+				ps.setString(17, alert.getTextToSpeechFileLocation());
+				ps.setString(18, alert.getVonageCurrentConversationId());
+				ps.setString(19, alert.getAnsweredPhoneNumber());
+				ps.setInt(20, alert.getOrderOfAnsweredCall());
+				ps.setInt(21, alert.getVonageConversationLength());
+				ps.setString(22, alert.getCustomerResponseToCall());
+				if (alertDate == null) {
+					ps.setNull(23, Types.TIMESTAMP);
+				} else {
+					ps.setTimestamp(23, alertDate);
+				}
+				ps.setString(24, alert.getAlertZoneId());
+				ps.setString(25, alert.getCsNumber());
+				
+				ps.executeUpdate();
+				return "success";
+			} catch (Exception e) {
+				log.error("Error occurred while trying to INSERT Alert event of alarm incident number: " + alert.getAlarmIncidentNumber()
+					+ " Alert: " + alert.toString() + " Attempt: " + currentAttempt + " Error: " + ExceptionUtils.getStackTrace(e));
+				try {
+					long sleepMs = ThreadLocalRandom.current().nextLong(300, 701);
+					Thread.sleep(sleepMs);
+				} catch (Exception ex) {}
+			} finally {
+				closeResources(connection, ps, null);
+			}
+		}
+		return null;
+	}
+	
+	public static String updateAlert(Alert alert) {
+		Connection connection = null;
+		PreparedStatement ps = null;
+		final int MAX_NUMBER_OF_ATTEMPTS = 5;
+		int currentAttempt = 0;
+		while (currentAttempt < MAX_NUMBER_OF_ATTEMPTS) {
+			currentAttempt++;
+			try {
+				connection = basicDS.getConnection();
+				ps = connection.prepareStatement(Constants.SQL_QUERY_UPDATE_ALERT);
+				alert.setUpdatedAt(Utils.getTimestampFromDate(null));
+				Timestamp createdAtTs = new Timestamp(Utils.getDateFromString(alert.getCreatedAt(), Constants.TIMESTAMP_PATTERN).getTime());
+				Timestamp updatedAtTs = new Timestamp(Utils.getDateFromString(alert.getUpdatedAt(), Constants.TIMESTAMP_PATTERN).getTime());
+				Timestamp alertDate = null;
+				if (alert.getAlertDate() != null) {
+					alertDate = new Timestamp(Utils.getDateFromString(alert.getAlertDate(), Constants.TIMESTAMP_PATTERN).getTime());
+				}
+				ps.setString(1, alert.getkId());
+				ps.setTimestamp(2, createdAtTs);
+				ps.setTimestamp(3, updatedAtTs);
+				ps.setString(4, alert.getSiteNumber());
+				ps.setString(5, alert.getSystemNumber());
+				ps.setString(6, alert.getAlarmIncidentNumber());
+				ps.setString(7, alert.getDispatchLocation());
+				ps.setString(8, alert.getAlarmEventId());
+				ps.setString(9, alert.getCurrentWriteEventCode());
+				ps.setString(10, alert.getFullClearStatus());
+				ps.setBoolean(11, alert.isActiveAlert());
+				ps.setString(12, alert.getAlertHandlingStatusCode());
+				ps.setString(13, alert.getAlertHandlingStatusMessage());
+				ps.setString(14, alert.getProgressMessages());
+				ps.setString(15, alert.getContacts());
+				ps.setString(16, alert.getCallGeneratedText());
+				ps.setString(17, alert.getTextToSpeechFileLocation());
+				ps.setString(18, alert.getVonageCurrentConversationId());
+				ps.setString(19, alert.getAnsweredPhoneNumber());
+				ps.setInt(20, alert.getOrderOfAnsweredCall());
+				ps.setInt(21, alert.getVonageConversationLength());
+				ps.setString(22, alert.getCustomerResponseToCall());
+				if (alertDate == null) {
+					ps.setNull(23, Types.TIMESTAMP);
+				} else {
+					ps.setTimestamp(23, alertDate);
+				}
+				ps.setString(24, alert.getAlertZoneId());
+				ps.setString(25, alert.getCsNumber());
+				ps.setString(26, alert.getAlarmIncidentNumber());
+				
+				ps.executeUpdate();
+				return "success";
+			} catch (Exception e) {
+				log.error("Error occurred while trying to UPDATE Alert event of alarm incident number: " + alert.getAlarmIncidentNumber()
+					+ " Alert: " + alert.toString() + " Attempt: " + currentAttempt + " Error: " + ExceptionUtils.getStackTrace(e));
+				try {
+					Thread.sleep(1000);
+				} catch (Exception ex) {}
+			} finally {
+				closeResources(connection, ps, null);
+			}
+		}
+		return null;
+	}
+	
 	public static String upsertAlert(Alert alert) {
 		Connection connection = null;
 		PreparedStatement ps = null;
@@ -534,7 +686,8 @@ public class CallServiceDAOImplementation {
 				log.error("Error occurred while trying to upsert Alert event of alarm incident number: " + alert.getAlarmIncidentNumber()
 					+ " Alert: " + alert.toString() + " Attempt: " + currentAttempt + " Error: " + ExceptionUtils.getStackTrace(e));
 				try {
-					Thread.sleep(1000);
+					long sleepMs = ThreadLocalRandom.current().nextLong(300, 701);
+					Thread.sleep(sleepMs);
 				} catch (Exception ex) {}
 			} finally {
 				closeResources(connection, ps, null);

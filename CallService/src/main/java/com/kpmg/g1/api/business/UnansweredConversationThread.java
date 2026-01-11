@@ -41,12 +41,12 @@ public class UnansweredConversationThread extends Thread {
 		if (alert == null) {
 			// may be due to multiple transactions to db. try to sleep and check again
 			try {
-				Thread.sleep(5000);
+				Thread.sleep(3000);
 			} catch (Exception e) {}
-			log.info("check again for uuid: " + this.vonageUuid);
+			log.info("Unanswered: check again for uuid: " + this.vonageUuid);
 			alert = CallServiceDAOImplementation.getAlertByVonageUuid(this.vonageUuid);
 			if (alert == null) {
-				log.warn("Received vonage UUID: " + this.vonageUuid + " which does not have a matching Alert object in Alerts table! check ASAP");
+				log.warn("Unanswered: Received vonage UUID: " + this.vonageUuid + " which does not have a matching Alert object in Alerts table! check ASAP");
 				return;
 			}
 		}
@@ -139,7 +139,7 @@ public class UnansweredConversationThread extends Thread {
 						"Failed to update write-event API with status + of unasnwered call of contact: " 
 						+ currentUnansweredContact.getString("name") + " with phone: " + currentUnansweredContact.getString("phone"));
 				alert.setUpdatedAt(Utils.getTimestampFromDate(null));
-				CallServiceDAOImplementation.upsertAlert(alert);
+				CallServiceDAOImplementation.updateAlert(alert);
 				return;
 			} else {
 				alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_INFO,
@@ -162,7 +162,7 @@ public class UnansweredConversationThread extends Thread {
 					JSONConfigurations.getInstance().getConfigurations().getString("errorNotificationPhoneNumber"), alert.getCsNumber(),
 					JSONConfigurations.getInstance().getConfigurations().getString("errorNotificationSubject"),
 					JSONConfigurations.getInstance().getConfigurations().getString("errorNotificationMessage"));
-			CallServiceDAOImplementation.upsertAlert(alert);
+			CallServiceDAOImplementation.updateAlert(alert);
 			return;
 		} else {
 			alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_INFO,
@@ -174,7 +174,7 @@ public class UnansweredConversationThread extends Thread {
 			alert.setUpdatedAt(Utils.getTimestampFromDate(null));
 			ConversationsUUIDCache.getInstance().addToCache(alert.getVonageCurrentConversationId(), alert.getkId());
 			alert.setUpdatedAt(Utils.getTimestampFromDate(null));
-			CallServiceDAOImplementation.upsertAlert(alert);
+			CallServiceDAOImplementation.updateAlert(alert);
 		}
 	}
 	
@@ -201,7 +201,7 @@ public class UnansweredConversationThread extends Thread {
 			alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_ERROR,
 					"Failed to update write-event API");
 			alert.setUpdatedAt(Utils.getTimestampFromDate(null));
-			CallServiceDAOImplementation.upsertAlert(alert);
+			CallServiceDAOImplementation.updateAlert(alert);
 			return;
 		} else {
 			alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_INFO,
@@ -247,7 +247,7 @@ public class UnansweredConversationThread extends Thread {
 		
 		alert.setActiveAlert(false);
 		alert.setUpdatedAt(Utils.getTimestampFromDate(null));
-		CallServiceDAOImplementation.upsertAlert(alert);
+		CallServiceDAOImplementation.updateAlert(alert);
 		
 	}
 		

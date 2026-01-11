@@ -175,7 +175,11 @@ public class Utils {
 			if (ConversationsUUIDCache.getInstance().getConversationToKidCache().containsKey(uuid)) {
 				kid = ConversationsUUIDCache.getInstance().getConversationToKidCache().get(uuid);
 			} else {
-				kid = CallServiceDAOImplementation.getKidByVonageUUID(uuid);
+				// try to get Kid from conversations table first and only if failed try to use alerts table
+				kid = CallServiceDAOImplementation.getkIdByConversationIdOrUUID(uuid, conversationId);
+				if (kid == null) {
+					kid = CallServiceDAOImplementation.getKidByVonageUUID(uuid);
+				} 
 				if (kid== null) {
 					kid = "";
 				} else {
@@ -484,7 +488,9 @@ public class Utils {
 							+ " when trying to start call with values - toNumber: " + toNumber + ", pathToSpeechFile: " +  pathToSpeechFile
 							+ " data: " + responseData);
 				}
-
+				try {
+					Thread.sleep(500);
+				} catch (Exception ex) {}
 			} catch (Exception e) {
 				log.error("Received Exception when trying to start call with values - toNumber: " + toNumber + ", pathToSpeechFile: " +  pathToSpeechFile
 						+ " .Error: " + ExceptionUtils.getStackTrace(e));

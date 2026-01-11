@@ -13,7 +13,7 @@ import com.kpmg.g1.api.utils.Utils;
 
 public class AnsweredConversationThread extends Thread {
 
-	final static Logger log = LogManager.getLogger(UnansweredConversationThread.class.getName());
+	final static Logger log = LogManager.getLogger(AnsweredConversationThread.class.getName());
 	private String vonageUuid;
 	private String contactResponse;
 	private String answeredNumber;
@@ -70,8 +70,16 @@ public class AnsweredConversationThread extends Thread {
 		// fetch Alert object from DB by vonage uuid
 		Alert alert = CallServiceDAOImplementation.getAlertByVonageUuid(this.vonageUuid);
 		if (alert == null) {
-			log.warn("Received vonage UUID: " + this.vonageUuid + " which does not have a matching Alert object in Alerts table. If call was transfered to dispatch. ignore this message");
-			return;
+			// may be due to multiple transactions to db. try to sleep and check again
+			try {
+				Thread.sleep(3000);
+			} catch (Exception e) {}
+			log.info("Answered: check again for uuid: " + this.vonageUuid);
+			alert = CallServiceDAOImplementation.getAlertByVonageUuid(this.vonageUuid);
+			if (alert == null) {
+				log.warn("Answered: Received vonage UUID: " + this.vonageUuid + " which does not have a matching Alert object in Alerts table. If call was transfered to dispatch. ignore this message");
+				return;
+			}
 		}
 		alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_INFO,
 				"Received answer from contact with number: " + this.answeredNumber + " with value: " + this.contactResponse + ". Ending alert with status +23"); 
@@ -111,14 +119,14 @@ public class AnsweredConversationThread extends Thread {
 					JSONConfigurations.getInstance().getConfigurations().getString("errorNotificationPhoneNumber"), alert.getCsNumber(),
 					JSONConfigurations.getInstance().getConfigurations().getString("errorNotificationSubject"),
 					JSONConfigurations.getInstance().getConfigurations().getString("errorNotificationMessage"));
-			CallServiceDAOImplementation.upsertAlert(alert);
+			CallServiceDAOImplementation.updateAlert(alert);
 			return;
 		} else {
 			alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_INFO,
 					"successfuly updated write event api with code: " + alert.getCurrentWriteEventCode() + " and flag " + alert.getFullClearStatus() + ". Alert was handled successfully");
 		}
 		alert.setUpdatedAt(Utils.getTimestampFromDate(null));
-		CallServiceDAOImplementation.upsertAlert(alert);
+		CallServiceDAOImplementation.updateAlert(alert);
 	}
 	
 	private JSONObject getAnsweredContactDetails(JSONArray contacts) {

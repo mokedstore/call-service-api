@@ -66,7 +66,7 @@ public class OpenAlertHandler extends Thread {
 					JSONConfigurations.getInstance().getConfigurations().getString("errorNotificationPhoneNumber"), this.alert.getCsNumber(),
 					JSONConfigurations.getInstance().getConfigurations().getString("errorNotificationSubject"),
 					JSONConfigurations.getInstance().getConfigurations().getString("errorNotificationMessage"));
-			CallServiceDAOImplementation.upsertAlert(this.alert);
+			CallServiceDAOImplementation.insertAlert(this.alert);
 			return;
 		} else {
 			this.alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_INFO,
@@ -93,7 +93,7 @@ public class OpenAlertHandler extends Thread {
 			// update that alert handling failed
 			Utils.updateEvent(this.alert.getSystemNumber(), this.alert.getAlarmIncidentNumber(), this.alert.getCurrentWriteEventCode(),
 					this.alert.getFullClearStatus(), Constants.FAILED_ALERT_COMMENT, Constants.FULL_CLEAR_FLAG_YES);
-			CallServiceDAOImplementation.upsertAlert(this.alert);
+			CallServiceDAOImplementation.insertAlert(this.alert);
 			return;
 		} else {
 			this.alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_INFO,
@@ -117,7 +117,7 @@ public class OpenAlertHandler extends Thread {
 					JSONConfigurations.getInstance().getConfigurations().getString("errorNotificationPhoneNumber"), this.alert.getCsNumber(),
 					JSONConfigurations.getInstance().getConfigurations().getString("errorNotificationSubject"),
 					JSONConfigurations.getInstance().getConfigurations().getString("errorNotificationMessage"));
-			CallServiceDAOImplementation.upsertAlert(this.alert);
+			CallServiceDAOImplementation.insertAlert(this.alert);
 			return;
 		} else {
 			this.alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_INFO,
@@ -144,7 +144,7 @@ public class OpenAlertHandler extends Thread {
 					JSONConfigurations.getInstance().getConfigurations().getString("errorNotificationPhoneNumber"), this.alert.getCsNumber(),
 					JSONConfigurations.getInstance().getConfigurations().getString("errorNotificationSubject"),
 					JSONConfigurations.getInstance().getConfigurations().getString("errorNotificationMessage"));
-			CallServiceDAOImplementation.upsertAlert(this.alert);
+			CallServiceDAOImplementation.insertAlert(this.alert);
 			return;
 		} else {
 			this.alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_INFO,
@@ -165,7 +165,7 @@ public class OpenAlertHandler extends Thread {
 			// update that alert handling failed
 			Utils.updateEvent(this.alert.getSystemNumber(), this.alert.getAlarmIncidentNumber(), this.alert.getCurrentWriteEventCode(),
 					this.alert.getFullClearStatus(), Constants.FAILED_ALERT_COMMENT, Constants.FULL_CLEAR_FLAG_YES);
-			CallServiceDAOImplementation.upsertAlert(this.alert);
+			CallServiceDAOImplementation.insertAlert(this.alert);
 			Utils.sendSmsDirect(Integer.parseInt(this.alert.getSiteNumber()), 
 					JSONConfigurations.getInstance().getConfigurations().getString("errorNotificationPhoneNumber"), this.alert.getCsNumber(),
 					JSONConfigurations.getInstance().getConfigurations().getString("errorNotificationSubject"),
@@ -200,7 +200,7 @@ public class OpenAlertHandler extends Thread {
 					JSONConfigurations.getInstance().getConfigurations().getString("errorNotificationPhoneNumber"), this.alert.getCsNumber(),
 					JSONConfigurations.getInstance().getConfigurations().getString("errorNotificationSubject"),
 					JSONConfigurations.getInstance().getConfigurations().getString("errorNotificationMessage"));
-			CallServiceDAOImplementation.upsertAlert(this.alert);
+			CallServiceDAOImplementation.insertAlert(this.alert);
 			return;
 		} else {
 			this.alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_INFO,
@@ -211,7 +211,7 @@ public class OpenAlertHandler extends Thread {
 			this.alert.setContacts(contacts.toString());
 			ConversationsUUIDCache.getInstance().addToCache(this.alert.getVonageCurrentConversationId(), this.alert.getkId());
 		}
-		CallServiceDAOImplementation.upsertAlert(this.alert);
+		CallServiceDAOImplementation.insertAlert(this.alert);
 	}
 	
 	private void handleDuplicateAlert() {
@@ -233,8 +233,7 @@ public class OpenAlertHandler extends Thread {
 			this.alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_INFO,
 					"successfuly updated write event api with code: " + this.alert.getCurrentWriteEventCode() + " and flag " + this.alert.getFullClearStatus());
 		}
-		CallServiceDAOImplementation.upsertAlert(this.alert);
-		
+		CallServiceDAOImplementation.insertAlert(this.alert);	
 	}
 	
 	private String getCustomMessageIdFromAlarmEventId() {

@@ -108,6 +108,16 @@ public class Constants {
 			+ " callGeneratedText=?, textToSpeechFileLocation=?, vonageCurrentConversationId=?, answeredPhoneNumber=?, orderOfAnsweredCall=?, vonageConversationLength=?,"
 			+ " customerResponseToCall=?, alertDate=?, alertZoneId=?, csNumber=? WHERE alarmIncidentNumber=?";
 	
+	public final static String SQL_QUERY_INSERT_ALERT = " INSERT INTO Alerts (kId, createdAt, updatedAt, siteNumber, systemNumber, alarmIncidentNumber, dispatchLocation, alarmEventId, currentWriteEventCode,"
+			+ " fullClearStatus, isActiveAlert, alertHandlingStatusCode, alertHandlingStatusMessage, progressMessages, contacts, callGeneratedText, textToSpeechFileLocation,"
+			+ " vonageCurrentConversationId, answeredPhoneNumber, orderOfAnsweredCall, vonageConversationLength, customerResponseToCall, alertDate, alertZoneId, csNumber) "
+			+ " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+	
+	public final static String SQL_QUERY_UPDATE_ALERT = "UPDATE Alerts SET kId=?, createdAt=?, updatedAt=?, siteNumber=?, systemNumber=?, alarmIncidentNumber=?, dispatchLocation=?, alarmEventId=?,"
+			+ " currentWriteEventCode=?, fullClearStatus=?, isActiveAlert=?, alertHandlingStatusCode=?, alertHandlingStatusMessage=?, progressMessages=?, contacts=?,"
+			+ " callGeneratedText=?, textToSpeechFileLocation=?, vonageCurrentConversationId=?, answeredPhoneNumber=?, orderOfAnsweredCall=?, vonageConversationLength=?,"
+			+ " customerResponseToCall=?, alertDate=?, alertZoneId=?, csNumber=? WHERE alarmIncidentNumber=?";
+	
 	public final static String SQL_QUERY_INSERT_CONVERSATION_RECORD = "INSERT INTO Conversations (conversationId, uuid, fromNo, toNo, eventTimestamp, disconnectedBy, "
 			+ "duration, rate, price, startTime, endTime, rawEvent, kId, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 	
@@ -118,6 +128,8 @@ public class Constants {
 			+ " AND (status = 'busy')";
 	public final static String SQL_QUERY_CHECK_NUMBER_OF_ANSWERS = "SELECT COUNT(*) AS count FROM Conversations WHERE (uuid = ? OR conversationId = ?)" +
 			" AND status LIKE 'dtmf%'";
+	
+	public final static String SQL_QUERY_GET_KID_BY_CONVERSATION_ID_OR_UUID = "SELECT DISTINCT kId FROM Conversations WHERE (uuid=? OR conversationId=?) and kId <> ''";
 	
 	public final static String CONVERSATIONS_COLUMN_UUID = "uuid";
 	public final static String CONVERSATIONS_COLUMN_STATUS = "status";

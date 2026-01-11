@@ -8,6 +8,7 @@ import java.nio.file.Paths;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.Map;
+import java.util.UUID;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.logging.log4j.LogManager;
@@ -155,13 +156,20 @@ public class Vonage {
 	@Consumes(MediaType.APPLICATION_JSON)
 	public Response answer(String requestBody) {
 		JSONObject requestBodyObj = new JSONObject(requestBody);
+		String traceId = UUID.randomUUID().toString();
+		log.trace("Answer - traceId: " + traceId + " uuid: " +  requestBodyObj.optString("uuid", requestBodyObj.optString("call_uuid", requestBodyObj.optString("callId", "")))
+		 + " ConversationId: " + requestBodyObj.optString("conversation_uuid", "") + " status: " + requestBodyObj.optString("status", "") + " detailed: " + requestBodyObj.optString("detail", ""));
 		Conversation conversationObject = Utils.buildConversationObjectFromVonageEvent(requestBodyObj);
 		if (conversationObject == null) {
 			log.error("Falied to build conversation object in /vonage/answer with body " + requestBody + " event will be ignored");
 			JSONArray ncco = new JSONArray().put(new JSONObject());
 			return Response.status(200).entity(ncco.toString()).build();
 		} else {
+		  log.trace("Answer - build object - traceId: " + traceId + " uuid: " +  conversationObject.getUuid()
+			 + "ConversationId: " + conversationObject.getConversationId() + " kId: " + conversationObject.getkId());
 		  CallServiceDAOImplementation.insertConversation(conversationObject);
+		  log.trace("Answer - Inserted Conversation - traceId: " + traceId + " uuid: " +  conversationObject.getUuid()
+			 + "ConversationId: " + conversationObject.getConversationId() + " kId: " + conversationObject.getkId());
 		  // continue business use case based on event status (only relevant events are timeout/hangup or answered)
 		  if (requestBodyObj.optString("status", "").equals("timeout") || requestBodyObj.optString("status", "").equals("unanswered")
 				  || (requestBodyObj.optString("status", "").equals("busy") && requestBodyObj.optString("detail", "").equals("remote_busy"))
@@ -206,6 +214,8 @@ public class Vonage {
 			  }
 		  }
 		}
+		log.trace("Answer - Before return - traceId: " + traceId + " uuid: " +  conversationObject.getUuid()
+		 + "ConversationId: " + conversationObject.getConversationId() + " kId: " + conversationObject.getkId());
 		JSONArray ncco = new JSONArray().put(new JSONObject());
 		return Response.status(200).entity(ncco.toString()).build();
 	}
@@ -215,15 +225,20 @@ public class Vonage {
 	@Produces(MediaType.APPLICATION_JSON)
 	@Consumes(MediaType.APPLICATION_JSON)
 	public Response eventApi(String requestBody) {
+		String traceId = UUID.randomUUID().toString();
+		JSONObject requestBodyObj = new JSONObject(requestBody);
+		log.trace("Event - traceId: " + traceId + " uuid: " +  requestBodyObj.optString("uuid", requestBodyObj.optString("call_uuid", requestBodyObj.optString("callId", "")))
+		 + " ConversationId: " + requestBodyObj.optString("conversation_uuid", "") + " status: " + requestBodyObj.optString("status", "") + " detailed: " + requestBodyObj.optString("detail", ""));
 		JSONArray ncco = new JSONArray();
 		try {
-			JSONObject requestBodyObj = new JSONObject(requestBody);
 			Conversation conversationObject = Utils.buildConversationObjectFromVonageEvent(requestBodyObj);
 			if (conversationObject == null) {
 				log.error("In Vonage Event: received request body which could not be converted to conversation object. Will not proceed with call! data: " + requestBodyObj.toString());
 				ncco.put(new JSONObject());
 				return Response.status(500).entity(ncco.toString()).build();
 			}
+			log.trace("Event - build object - traceId: " + traceId + " uuid: " +  conversationObject.getUuid()
+			 + " ConversationId: " + conversationObject.getConversationId() + " kId: " + conversationObject.getkId());
 			if (requestBodyObj.has("uuid") && requestBodyObj.isNull("uuid")) {
 				if (requestBodyObj.has("dtmf") && requestBodyObj.getJSONObject("dtmf").getBoolean("timed_out")) {
 					conversationObject.setStatus("dtmf:noAnswer");
@@ -358,6 +373,8 @@ public class Vonage {
 				ncco.put(new JSONObject());
 			}
 			CallServiceDAOImplementation.insertConversation(conversationObject);
+			log.trace("Event - Inserted Conversation - traceId: " + traceId + " uuid: " +  conversationObject.getUuid()
+			 + " ConversationId: " + conversationObject.getConversationId() + " kId: " + conversationObject.getkId());
 			return Response.status(200).entity(ncco.toString()).build();
 		} catch (Exception e) {
 			log.error("Error occured In event with body " + requestBody + " Error: " + e.getMessage());
