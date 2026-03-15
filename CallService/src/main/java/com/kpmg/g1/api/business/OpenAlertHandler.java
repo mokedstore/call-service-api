@@ -153,7 +153,14 @@ public class OpenAlertHandler extends Thread {
 			this.alert.setCallGeneratedText(ssmlText);
 
 		}
-		JSONObject textToSpeechResponse = Utils.convertTextToSpeech(ssmlText);
+		String ttsServiceToUse = null;
+		if (JSONConfigurations.getInstance().getConfigurations().has("ttsServiceToUse")) {
+			ttsServiceToUse = JSONConfigurations.getInstance().getConfigurations().getString("ttsServiceToUse");
+		} else {
+			log.error("Could not open new alert since ttsServiceToUse field is not defined in configurations");
+			return;
+		}
+		JSONObject textToSpeechResponse = Utils.convertTextToSpeech(ssmlText, ttsServiceToUse);
 		if (textToSpeechResponse == null) {
 			this.alert.setAlertHandlingStatusCode(Constants.FAILED_TO_CREATE_AUDIO_FILE_STATUS_CODE);
 			this.alert.setAlertHandlingStatusMessage("Failed to create audio file from text");

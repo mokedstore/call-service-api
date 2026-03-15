@@ -71,11 +71,17 @@ public class AnsweredConversationThread extends Thread {
 		Alert alert = CallServiceDAOImplementation.getAlertByVonageUuid(this.vonageUuid);
 		if (alert == null) {
 			// may be due to multiple transactions to db. try to sleep and check again
-			try {
-				Thread.sleep(3000);
-			} catch (Exception e) {}
-			log.info("Answered: check again for uuid: " + this.vonageUuid);
-			alert = CallServiceDAOImplementation.getAlertByVonageUuid(this.vonageUuid);
+			int attempts = 0;
+			final int MAX_ATTEMPTS = 5;
+			while (attempts < MAX_ATTEMPTS) {
+				attempts++;
+				try {
+					Thread.sleep(3000);
+				} catch (Exception e) {}
+				log.info("Answered: check again for uuid: " + this.vonageUuid + " Attempt: " + String.valueOf(attempts));
+				alert = CallServiceDAOImplementation.getAlertByVonageUuid(this.vonageUuid);
+				if (alert != null) { break; }
+			}
 			if (alert == null) {
 				log.warn("Answered: Received vonage UUID: " + this.vonageUuid + " which does not have a matching Alert object in Alerts table. If call was transfered to dispatch. ignore this message");
 				return;

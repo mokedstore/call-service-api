@@ -17,6 +17,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import com.kpmg.g1.api.business.AnsweredConversationThread;
+import com.kpmg.g1.api.business.ConversationInserterThread;
 import com.kpmg.g1.api.business.UnansweredConversationThread;
 import com.kpmg.g1.api.dao.CallServiceDAOImplementation;
 import com.kpmg.g1.api.objects.model.Conversation;
@@ -166,10 +167,9 @@ public class Vonage {
 			return Response.status(200).entity(ncco.toString()).build();
 		} else {
 		  log.trace("Answer - build object - traceId: " + traceId + " uuid: " +  conversationObject.getUuid()
-			 + "ConversationId: " + conversationObject.getConversationId() + " kId: " + conversationObject.getkId());
-		  CallServiceDAOImplementation.insertConversation(conversationObject);
-		  log.trace("Answer - Inserted Conversation - traceId: " + traceId + " uuid: " +  conversationObject.getUuid()
-			 + "ConversationId: " + conversationObject.getConversationId() + " kId: " + conversationObject.getkId());
+			 + " ConversationId: " + conversationObject.getConversationId() + " kId: " + conversationObject.getkId());
+		  ConversationInserterThread conversationInserterThread = new ConversationInserterThread(conversationObject, traceId);
+		  conversationInserterThread.start();
 		  // continue business use case based on event status (only relevant events are timeout/hangup or answered)
 		  if (requestBodyObj.optString("status", "").equals("timeout") || requestBodyObj.optString("status", "").equals("unanswered")
 				  || (requestBodyObj.optString("status", "").equals("busy") && requestBodyObj.optString("detail", "").equals("remote_busy"))
@@ -215,7 +215,7 @@ public class Vonage {
 		  }
 		}
 		log.trace("Answer - Before return - traceId: " + traceId + " uuid: " +  conversationObject.getUuid()
-		 + "ConversationId: " + conversationObject.getConversationId() + " kId: " + conversationObject.getkId());
+		 + " ConversationId: " + conversationObject.getConversationId() + " kId: " + conversationObject.getkId());
 		JSONArray ncco = new JSONArray().put(new JSONObject());
 		return Response.status(200).entity(ncco.toString()).build();
 	}

@@ -389,7 +389,7 @@ public class Utils {
 		}
 	}
 	
-	public static JSONObject convertTextToSpeech(String ssml) {
+	public static JSONObject convertTextToSpeech(String ssml, String serviceToUse) {
 		// build url using kid
 		String url = JSONConfigurations.getInstance().getConfigurations().getString("callServiceBaseUrl")
 				+ "/CallService/api/action/text/to/speech";
@@ -403,6 +403,7 @@ public class Utils {
 		
 		JSONObject requsetDataObject = new JSONObject();
 		requsetDataObject.put("ssml", ssml);
+		requsetDataObject.put("serviceToUse", serviceToUse);
 		
 		// add request body data
 		StringEntity input = new StringEntity(requsetDataObject.toString(), "UTF-8");

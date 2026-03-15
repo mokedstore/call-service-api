@@ -53,6 +53,23 @@ public class Conversation {
 		this.kId = kId;
 		this.status = status;
 	}
+	
+	public Conversation(Conversation conversation) {
+		this.conversationId = conversation.getConversationId();
+		this.uuid = conversation.getUuid();
+		this.fromNo = conversation.getFromNo();
+		this.toNo = conversation.getToNo();
+		this.eventTimestamp = conversation.getEventTimestamp();
+		this.disconnectedBy = conversation.getDisconnectedBy();
+		this.duration = conversation.getDuration();
+		this.rate = conversation.getRate();
+		this.price = conversation.getPrice();
+		this.rawEvent = conversation.getRawEvent();
+		this.startTime = conversation.getStartTime();
+		this.endTime = conversation.getEndTime();
+		this.kId = conversation.getkId();
+		this.status = conversation.getStatus();
+	}
 
 	public String getConversationId() {
 		return conversationId;

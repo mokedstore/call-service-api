@@ -9,6 +9,8 @@ import com.kpmg.g1.api.business.AlertsFetcherThread;
 import com.kpmg.g1.api.business.AlertsOpenForTooLongThread;
 import com.kpmg.g1.api.utils.AzureTextToSpeechClient;
 //import com.kpmg.g1.api.utils.JSONConfigurations;
+import com.kpmg.g1.api.utils.Constants;
+import com.kpmg.g1.api.utils.GCPTextToSpeechClient;
 
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
@@ -97,9 +99,15 @@ public class CallServiceMainService {
 			
 		}
         String ssml = requestBodyJson.getString("ssml");
+        String serviceToUse = requestBodyJson.optString("serviceToUse", Constants.AZURE);
         try {
-        	    //JSONObject textToSpeechResponse = new JSONObject(JSONConfigurations.getInstance().getConfigurations().getJSONObject("mock").getJSONObject("textToSpeech").toString());
-              JSONObject textToSpeechResponse = AzureTextToSpeechClient.convertTextToSpeech(ssml);
+        	  //JSONObject textToSpeechResponse = new JSONObject(JSONConfigurations.getInstance().getConfigurations().getJSONObject("mock").getJSONObject("textToSpeech").toString());
+        	  JSONObject textToSpeechResponse = null;
+        	  if (serviceToUse.equals(Constants.GCP)) {
+        		  textToSpeechResponse = GCPTextToSpeechClient.convertTextToSpeech(ssml);
+        	  } else {
+        		  textToSpeechResponse = AzureTextToSpeechClient.convertTextToSpeech(ssml);  
+        	  }
               if(textToSpeechResponse.has("error")) {
             	  return Response.status(500).entity(textToSpeechResponse.toString()).build();
               }

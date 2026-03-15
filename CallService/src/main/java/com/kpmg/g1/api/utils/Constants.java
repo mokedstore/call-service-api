@@ -144,6 +144,9 @@ public class Constants {
 	
 	public final static int ISO_DATE_FORMAT_EXPECTED_LENGTH = 24;
 	
+	public final static String AZURE = "Azure";
+	public final static String GCP = "GCP";
+	
 	
 	public final static String VONAGE_START_CALL_REQUEST_BODY =  "{\n"
 			+ "	\"event_url\": [\n"
