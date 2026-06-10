@@ -1,5 +1,7 @@
 package com.kpmg.g1.api.business;
 
+import java.util.UUID;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.json.JSONArray;
@@ -193,21 +195,17 @@ public class OpenAlertHandler extends Thread {
 		//String callToNumber
 		JSONObject startVonageCallResponse = Utils.vonageStartCall(phoneNumber, this.alert.getTextToSpeechFileLocation());
 		if (startVonageCallResponse == null) {
-			this.alert.setAlertHandlingStatusCode(Constants.FAILED_TO_START_VONAGE_CALL_STATUS_CODE);
-			this.alert.setAlertHandlingStatusMessage("Failed to create vonage call");
 			this.alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_ERROR,
-					"Failed to create call to vonage to number: " + phoneNumber); 
-			this.alert.setActiveAlert(false);
-			this.alert.setCurrentWriteEventCode(Constants.FAILED_ALERT_CODE_EVENT);
-			this.alert.setFullClearStatus(Constants.FULL_CLEAR_FLAG_YES);
-			// update that alert handling failed
-			Utils.updateEvent(this.alert.getSystemNumber(), this.alert.getAlarmIncidentNumber(), this.alert.getCurrentWriteEventCode(),
-					this.alert.getFullClearStatus(), Constants.FAILED_ALERT_COMMENT, Constants.FULL_CLEAR_FLAG_YES);
-			Utils.sendSmsDirect(Integer.parseInt(this.alert.getSiteNumber()), 
-					JSONConfigurations.getInstance().getConfigurations().getString("errorNotificationPhoneNumber"), this.alert.getCsNumber(),
-					JSONConfigurations.getInstance().getConfigurations().getString("errorNotificationSubject"),
-					JSONConfigurations.getInstance().getConfigurations().getString("errorNotificationMessage"));
+					"Failed to create call to vonage to number: " + phoneNumber + " treating call as unanswered."); 
+			this.alert.setVonageCurrentConversationId(UUID.randomUUID().toString());
 			CallServiceDAOImplementation.insertAlert(this.alert);
+			this.alert.setAlertHandlingStatusMessage(Constants.VONAGE_WAITING_FOR_CUSTOMER_RESPONSE);
+			contacts.getJSONObject(0).put("numberOfTries", 1);
+			this.alert.setContacts(contacts.toString());
+			ConversationsUUIDCache.getInstance().addToCache(this.alert.getVonageCurrentConversationId(), this.alert.getkId());
+			CallServiceDAOImplementation.insertAlert(this.alert);
+			UnansweredConversationThread unansweredConversationThread = new UnansweredConversationThread(this.alert.getVonageCurrentConversationId());
+			 unansweredConversationThread.start();
 			return;
 		} else {
 			this.alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_INFO,

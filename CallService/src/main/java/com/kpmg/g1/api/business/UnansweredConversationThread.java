@@ -1,5 +1,7 @@
 package com.kpmg.g1.api.business;
 
+import java.util.UUID;
+
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -158,17 +160,19 @@ public class UnansweredConversationThread extends Thread {
 		String phoneNumber = nextContact.getString("phone");
 		JSONObject startVonageCallResponse = Utils.vonageStartCall(phoneNumber, alert.getTextToSpeechFileLocation());
 		if (startVonageCallResponse == null) {
-			alert.setAlertHandlingStatusCode(Constants.FAILED_TO_START_VONAGE_CALL_STATUS_CODE);
-			alert.setAlertHandlingStatusMessage("Failed to create vonage call");
 			alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_ERROR,
-					"Failed to create call to vonage to number: " + phoneNumber); 
-			alert.setActiveAlert(false);
+					"Failed to create call to vonage to number: " + phoneNumber + " treating call as unanswered.");
+			alert.setVonageCurrentConversationId(UUID.randomUUID().toString());
+			alert.setAlertHandlingStatusMessage(Constants.VONAGE_WAITING_FOR_CUSTOMER_RESPONSE);
 			alert.setUpdatedAt(Utils.getTimestampFromDate(null));
-			Utils.sendSmsDirect(Integer.parseInt(alert.getSiteNumber()), 
-					JSONConfigurations.getInstance().getConfigurations().getString("errorNotificationPhoneNumber"), alert.getCsNumber(),
-					JSONConfigurations.getInstance().getConfigurations().getString("errorNotificationSubject"),
-					JSONConfigurations.getInstance().getConfigurations().getString("errorNotificationMessage"));
+			nextContact.put("numberOfTries", nextContact.getInt("numberOfTries") + 1);
+			alert.setContacts(contacts.toString());
+			ConversationsUUIDCache.getInstance().addToCache(alert.getVonageCurrentConversationId(), alert.getkId());
+			alert.setUpdatedAt(Utils.getTimestampFromDate(null));
 			CallServiceDAOImplementation.updateAlert(alert);
+			// Treat call as unanswered call and start a new Unanswered call instance
+			UnansweredConversationThread unansweredConversationThread = new UnansweredConversationThread(alert.getVonageCurrentConversationId());
+			unansweredConversationThread.start();
 			return;
 		} else {
 			alert.addProgressMessage(Utils.getTimestampFromDate(null), Constants.LOG_LEVEL_INFO,
@@ -177,7 +181,6 @@ public class UnansweredConversationThread extends Thread {
 			alert.setAlertHandlingStatusMessage(Constants.VONAGE_WAITING_FOR_CUSTOMER_RESPONSE);
 			nextContact.put("numberOfTries", nextContact.getInt("numberOfTries") + 1);
 			alert.setContacts(contacts.toString());
-			alert.setUpdatedAt(Utils.getTimestampFromDate(null));
 			ConversationsUUIDCache.getInstance().addToCache(alert.getVonageCurrentConversationId(), alert.getkId());
 			alert.setUpdatedAt(Utils.getTimestampFromDate(null));
 			CallServiceDAOImplementation.updateAlert(alert);
