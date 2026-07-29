@@ -86,7 +86,7 @@ public class Utils {
 	
 	public static Date getOlderDateByMinutes(Date date, int minutes) {
 		try {
-			Instant newInstant = date.toInstant().minus(30, ChronoUnit.MINUTES);
+			Instant newInstant = date.toInstant().minus(minutes, ChronoUnit.MINUTES);
 	        Date newDate = Date.from(newInstant);
 	        return newDate;
 		} catch (Exception e) {
